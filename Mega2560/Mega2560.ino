@@ -142,15 +142,12 @@ void serialEvent()
   while (Serial.available())
   {
     byte incomeByte = Serial.read();
-
   }
-
 }
 String incomeString = "";
 void serialEvent3()
 {
   Serial.print("Mega3 :");
-  
   while (Serial3.available())
   {
     byte incomeByte = Serial3.read();
@@ -712,7 +709,6 @@ void processBufferedMessage()
       countUpdateParameter = 0;
       tone(BUZZER_PIN, 2500, 50);
     }
-
   }
   else if (_buffer[1] == 0x43 && _buffer[2] == 0x44)
   {
@@ -769,6 +765,81 @@ void millisCounter(void)
   if (currentMicros - previousMicros >= 100) // 100 ms
   {
     previousMicros = currentMicros;
+
+    uint32_t ch01 = acVoltageA1.getVoltageRMS();
+    uint32_t ch02 = acVoltageA2.getVoltageRMS();
+    uint32_t ch03 = acVoltageA3.getVoltageRMS();
+    uint32_t ch04 = acVoltageA4.getVoltageRMS();
+    uint32_t ch05 = acVoltageA5.getVoltageRMS();
+    uint32_t ch06 = acVoltageA6.getVoltageRMS();
+    uint32_t ch07 = acVoltageA7.getVoltageRMS();
+    uint32_t ch08 = acVoltageA8.getVoltageRMS();
+    uint32_t ch09 = acVoltageA9.getVoltageRMS();
+    uint32_t ch10 = acVoltageA10.getVoltageRMS();
+
+    int limit = setting.alarm_limit.toInt();
+
+    if(ch01 > limit){
+      LED1.on();
+    }else{
+      LED1.off();
+    }
+
+    if(ch02 > limit){
+      LED2.on();
+    }else{
+      LED2.off();
+    }
+
+    if(ch03 > limit){
+      LED3.on();
+    }else{
+      LED3.off();
+    }
+
+    if(ch04 > limit){
+      LED4.on();
+    }else{
+      LED4.off();
+    }
+
+    if(ch05 > limit){
+      LED5.on();
+    }else{
+      LED5.off();
+    }
+
+    if(ch06 > limit){
+      LED6.on();
+    }else{
+      LED6.off();
+    }
+
+    if(ch07 > limit){
+      LED7.on();
+    }else{
+      LED7.off();
+    }
+
+    if(ch08 > limit){
+      LED8.on();
+    }else{
+      LED8.off();
+    }
+
+    if(ch09 > limit){
+      LED9.on();
+    }else{
+      LED9.off();
+    }
+
+    if(ch10 > limit){
+      LED10.on();
+    }else{
+      LED10.off();
+    }
+    
+    
     // ESC UP  DOWN  ENTER = 2^4 = 16 case
     // 0 0 0 0
     if (!stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER)
