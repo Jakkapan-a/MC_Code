@@ -220,10 +220,13 @@ void setup()
   lcd.backlight();
   // lcd.noBacklight();
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("RMS Voltage:");
-  lcd.setCursor(0, 1);
-  lcd.clear();
+  // lcd.setCursor(0, 0);
+  // lcd.print("RMS Voltage:");
+  // lcd.setCursor(0, 1);
+  // lcd.clear();
+  // lcd.print("RMS Voltage:");
+  // lcd.setCursor(0, 1);
+  // // lcd.cursor();
   CountNoBacklight = NoBacklightTime;
 }
 // ------------------   LOOP   ------------------ //
@@ -337,6 +340,13 @@ void millisCounter(void)
     {
       // Press ENTER
       Serial.println("ENTER");
+      if (currentMenu == 0)
+      {
+      }
+      else if (currentMenu == 1)
+      {
+        currentSubMenu = 1;
+      }
     }
     // 0 0 1 0
     else if (!stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER)
@@ -346,6 +356,19 @@ void millisCounter(void)
       if (currentMenu == 0)
       {
         cursorPosition++;
+      }
+      if (currentMenu == 1 && currentSubMenu ==0)
+      {
+        cursorPosition++;
+      }else if (currentMenu == 1 && currentSubMenu != 0)
+      {
+        if(cursorPosition == 11){
+          if(currentSubMenu == 1){
+            currentSubMenu = 2;
+          }else if(currentSubMenu == 2){
+            currentSubMenu = 1;
+          }
+        }
       }
     }
     // 0 0 1 1
@@ -362,6 +385,19 @@ void millisCounter(void)
       if (currentMenu == 0)
       {
         cursorPosition--;
+      }
+      if (currentMenu == 1 && currentSubMenu ==0)
+      {
+        cursorPosition--;
+      }else if (currentMenu == 1 && currentSubMenu != 0)
+      {
+        if(cursorPosition == 11){
+          if(currentSubMenu == 1){
+            currentSubMenu = 2;
+          }else if(currentSubMenu == 2){
+            currentSubMenu = 1;
+          }
+        }
       }
     }
     // 0 1 0 1
@@ -392,10 +428,13 @@ void millisCounter(void)
         currentMenu = 1;
         cursorPosition = 0;
       }
-      else if (currentMenu == 1)
+      else if (currentMenu == 1 && currentSubMenu == 0)
       {
         currentMenu = 0;
         cursorPosition = 0;
+      }else if (currentMenu == 1 && currentSubMenu != 0)
+      {
+        currentSubMenu = 0;
       }
     }
     // 1 0 0 1
@@ -472,7 +511,7 @@ void OnPress_UP(void)
 {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
-   countBackHome = countBackHomeTime;
+  countBackHome = countBackHomeTime;
   lcd.backlight();
   previousMicros = millis();
   stateBTN_UP = true;
@@ -486,7 +525,7 @@ void OnPress_DOWN(void)
 {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
-   countBackHome = countBackHomeTime;
+  countBackHome = countBackHomeTime;
   lcd.backlight();
   previousMicros = millis();
   stateBTN_DOWN = true;
@@ -501,7 +540,7 @@ void OnPress_ENTER(void)
 {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
-   countBackHome = countBackHomeTime;
+  countBackHome = countBackHomeTime;
   lcd.backlight();
   previousMicros = millis();
   stateBTN_ENTER = true;
@@ -516,45 +555,59 @@ void OnRelease_ENTER(void)
 void updateDisplay()
 {
   updateDisplay1();
+  updateDisplaySetting();
+  updateDisplaySubSetting();
 }
-String currentLine1 = "                ";  //  16 ตัว
-String currentLine2 = "                ";  //  16 ตัว
+String currentLine1 = "                "; //  16 ตัว
+String currentLine2 = "                "; //  16 ตัว
 
 void updateLCD(const String &newDataLine1, const String &newDataLine2)
 {
   // Line 1
-    for (int i = 0; i < 16; i++) {
-        if (i < newDataLine1.length()) {
-            if (newDataLine1[i] != currentLine1[i]) {
-                lcd.setCursor(i, 0);
-                lcd.print(newDataLine1[i]);
-                currentLine1[i] = newDataLine1[i];
-            }
-        } else {
-            if (currentLine1[i] != ' ') {
-                lcd.setCursor(i, 0);
-                lcd.print(' ');
-                currentLine1[i] = ' ';
-            }
-        }
+  for (int i = 0; i < 16; i++)
+  {
+    if (i < newDataLine1.length())
+    {
+      if (newDataLine1[i] != currentLine1[i])
+      {
+        lcd.setCursor(i, 0);
+        lcd.print(newDataLine1[i]);
+        currentLine1[i] = newDataLine1[i];
+      }
     }
+    else
+    {
+      if (currentLine1[i] != ' ')
+      {
+        lcd.setCursor(i, 0);
+        lcd.print(' ');
+        currentLine1[i] = ' ';
+      }
+    }
+  }
 
-    // Line 2
-    for (int i = 0; i < 16; i++) {
-        if (i < newDataLine2.length()) {
-            if (newDataLine2[i] != currentLine2[i]) {
-                lcd.setCursor(i, 1);
-                lcd.print(newDataLine2[i]);
-                currentLine2[i] = newDataLine2[i];
-            }
-        } else {
-            if (currentLine2[i] != ' ') {
-                lcd.setCursor(i, 1);
-                lcd.print(' ');
-                currentLine2[i] = ' ';
-            }
-        }
+  // Line 2
+  for (int i = 0; i < 16; i++)
+  {
+    if (i < newDataLine2.length())
+    {
+      if (newDataLine2[i] != currentLine2[i])
+      {
+        lcd.setCursor(i, 1);
+        lcd.print(newDataLine2[i]);
+        currentLine2[i] = newDataLine2[i];
+      }
     }
+    else
+    {
+      if (currentLine2[i] != ' ')
+      {
+        lcd.setCursor(i, 1);
+        lcd.print(' ');
+        currentLine2[i] = ' ';
+      }
+    }
+  }
 }
 
 void updateDisplay1()
@@ -610,6 +663,10 @@ void updateDisplay1()
     newDataLine1 = "CH-9 : " + String(acVoltageA9.getVoltageRMS()) + " V";
     newDataLine2 = "CH-10 : " + String(acVoltageA10.getVoltageRMS()) + " V";
   }
+  else if (cursorPosition < 0)
+  {
+    cursorPosition = 8;
+  }
   else
   {
     // set cursorPosition = 0
@@ -618,12 +675,137 @@ void updateDisplay1()
   // updateLCD
   updateLCD(newDataLine1, newDataLine2);
 }
-void updateDisplay2()
+void updateDisplaySetting()
 {
   if (currentMenu != 1)
   {
     return;
   }
+  
+  if(currentSubMenu > 0){
+    return;
+  }
   String newDataLine1 = "";
   String newDataLine2 = "";
+  // DEVICE NAME
+  // SSID
+  // PASSWORD
+  // MQTT SERVER
+  // IP ADDRESS
+  // GATEWAY
+  // SUBNET
+  // PRIMARY DNS
+  // SECONDARY DNS
+  // TIME FOR SEND DATA
+  // ALARM LIMIT
+  // BOOT LOADER
+
+  if (cursorPosition == 0)
+  {
+    newDataLine1 = ">DEVICE NAME";
+    newDataLine2 = "SSID";
+  }else if(cursorPosition == 1){
+    newDataLine1 = "DEVICE NAME";
+    newDataLine2 = ">SSID";
+  }else if(cursorPosition == 2){
+    newDataLine1 = ">PASSWORD";
+    newDataLine2 = "MQTT SERVER";
+  }else if(cursorPosition == 3){
+    newDataLine1 = "PASSWORD";
+    newDataLine2 = ">MQTT SERVER";
+  }else if(cursorPosition == 4){
+    newDataLine1 = ">IP ADDRESS";
+    newDataLine2 = "GATEWAY";
+  }else if(cursorPosition == 5){
+    newDataLine1 = "IP ADDRESS";
+    newDataLine2 = ">GATEWAY";
+  }else if(cursorPosition == 6){
+    newDataLine1 = ">SUBNET";
+    newDataLine2 = "PRIMARY DNS";
+  }else if(cursorPosition == 7){
+    newDataLine1 = "SUBNET";
+    newDataLine2 = ">PRIMARY DNS";
+  }else if(cursorPosition == 8){
+    newDataLine1 = ">SECONDARY DNS";
+    newDataLine2 = "TIME SEND DATA";
+  }else if(cursorPosition == 9){
+    newDataLine1 = "SECONDARY DNS";
+    newDataLine2 = ">TIME SEND DATA";
+  }else if(cursorPosition == 10){
+    newDataLine1 = ">ALARM LIMIT";
+    newDataLine2 = "BOOT LOADER";
+  }else if(cursorPosition == 11){
+    newDataLine1 = "ALARM LIMIT";
+    newDataLine2 = ">BOOT LOADER";
+  }else if(cursorPosition < 0){
+    cursorPosition = 11;
+  }else{
+    cursorPosition = 0;
+  }
+  // updateLCD
+  updateLCD(newDataLine1, newDataLine2);
+}
+
+void updateDisplaySubSetting()
+{
+  if (currentMenu != 1)
+  {
+    return;
+  }
+  
+  if(currentSubMenu == 0){
+    return;
+  }
+
+  String newDataLine1 = "";
+  String newDataLine2 = "";
+
+  if(cursorPosition == 0 && currentSubMenu == 1){
+    newDataLine1 = "DEVICE NAME :";
+    newDataLine2 = "MACHINE1";
+  }
+  else if(cursorPosition == 1 && currentSubMenu == 1){
+    newDataLine1 = "SSID :";
+    newDataLine2 = "Internet";
+  }else if(cursorPosition == 2 && currentSubMenu == 1){
+    newDataLine1 = "PASSWORD :";
+    newDataLine2 = "0987654321qw";
+  }else if(cursorPosition == 3 && currentSubMenu == 1){
+    newDataLine1 = "MQTT SERVER :";
+    newDataLine2 = "192.167.2.123";
+  }else if(cursorPosition == 4 && currentSubMenu == 1){
+    newDataLine1 = "IP ADDRESS :";
+    newDataLine2 = "192.168.1.125";
+  }else if(cursorPosition == 5 && currentSubMenu == 1){
+    newDataLine1 = "GATEWAY :";
+    newDataLine2 = "10.10.10.10";
+  }else if(cursorPosition == 6 && currentSubMenu == 1){
+    newDataLine1 = "SUBNET :";
+    newDataLine2 = "255.255.0.0";
+  }else if(cursorPosition == 7 && currentSubMenu == 1){
+    newDataLine1 = "PRIMARY DNS :";
+    newDataLine2 = "8.8.8.8";
+  }else if(cursorPosition == 8 && currentSubMenu == 1){
+    newDataLine1 = "SECONDARY DNS :";
+    newDataLine2 = "4.4.4.4";
+  }else if (cursorPosition == 9 && currentSubMenu == 1){
+    newDataLine1 = "TIME SEND DATA :";
+    newDataLine2 = "10";
+  }else if(cursorPosition == 10 && currentSubMenu == 1){
+    newDataLine1 = "ALARM LIMIT :";
+    newDataLine2 = "10";
+  }else if(cursorPosition == 11 && currentSubMenu == 1){
+    newDataLine1 = "BOOT LOADER :";
+    newDataLine2 = "NO";
+  }else if(cursorPosition == 11 && currentSubMenu == 2){
+    newDataLine1 = "BOOT LOADER :";
+    newDataLine2 = "YES";
+  }else if(cursorPosition < 0){
+    cursorPosition = 11;
+  }else{
+    cursorPosition = 0;
+  }
+ 
+// updateLCD
+  updateLCD(newDataLine1, newDataLine2);
 }
