@@ -40,20 +40,21 @@ void setup_wifi() {
 
 void serialEvent()
 {
-  Serial.print("ESP :");
+  // Serial.print("ESP :");
   while (Serial.available())
   {
-    byte incomeByte = Serial.read();
+    // byte incomeByte = Serial.read();
   }
-    Serial.println("");
+
 }
+
+
 void setup() {
   Serial.begin(115200);
-  setup_wifi();
+  // setup_wifi();
 }
 
 void loop() 
 {
-  // Serial.println("1");
-  // delay(1000);
+
 }

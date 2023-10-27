@@ -2,6 +2,10 @@
 #include <TcPINOUT.h>
 #include <LiquidCrystal_I2C.h>
 #include <AcVoltage.h>
+#include <SPI.h>
+#include <SD.h>
+#include <Wire.h>
+#include "Setting.h"
 // ------------------   INPUT   ------------------ //
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Module IIC/I2C Interface บางรุ่นอาจจะใช้ 0x3f
 
@@ -24,6 +28,11 @@ TcBUTTON BTN_DOWN(BTN_DOWN_PIN);
 void OnPress_ENTER(void);
 void OnRelease_ENTER(void);
 TcBUTTON BTN_ENTER(BTN_ENTER_PIN);
+
+#define SD_CS 10   // | Mega 2560
+#define SD_MOSI 51 // | COPI 51
+#define SD_MISO 50 // | CIPO 50
+#define SD_SCK 52  // |  CSK 52
 
 // ------------------  Analog INPUT   ------------------ //
 #define AC_VOLTAGE1_PIN A1
@@ -119,6 +128,7 @@ int currentMenu = 0;
 int currentSubMenu = 0;
 int cursorPosition = 0;
 
+Setting setting;
 // ------------------   FUNCTIONS   ------------------ //
 void serialEvent()
 {
@@ -226,8 +236,21 @@ void setup()
   // lcd.clear();
   // lcd.print("RMS Voltage:");
   // lcd.setCursor(0, 1);
-  // // lcd.cursor();
+  // lcd.cursor();
   CountNoBacklight = NoBacklightTime;
+
+  if (!SD.begin(SD_CS))
+  {
+    Serial.println("SD card not found");
+    lcd.setCursor(0, 0);
+    lcd.print("SD Card");
+    lcd.setCursor(0, 1);
+    lcd.print("Not found!!");
+    while (1)
+      ;
+  }
+
+  setting.readFromSD();
 }
 // ------------------   LOOP   ------------------ //
 void loop()
@@ -343,7 +366,21 @@ void millisCounter(void)
       if (currentMenu == 0)
       {
       }
-      else if (currentMenu == 1)
+      else if (currentMenu == 1 && currentSubMenu == 0)
+      {
+        currentSubMenu = 1;
+      }
+      else if (currentMenu == 1 && currentSubMenu != 0)
+      {
+        if (cursorPosition == 17 && currentSubMenu == 1)
+        {
+
+        }
+        else if (cursorPosition == 17 && currentSubMenu == 2)
+        {
+          // Send data to ESP For update
+        }
+      }
       {
         currentSubMenu = 1;
       }
@@ -357,17 +394,15 @@ void millisCounter(void)
       {
         cursorPosition++;
       }
-      if (currentMenu == 1 && currentSubMenu ==0)
+      if (currentMenu == 1 && currentSubMenu == 0)
       {
         cursorPosition++;
-      }else if (currentMenu == 1 && currentSubMenu != 0)
+      }
+      else if (currentMenu == 1 && currentSubMenu != 0)
       {
-        if(cursorPosition == 11){
-          if(currentSubMenu == 1){
-            currentSubMenu = 2;
-          }else if(currentSubMenu == 2){
-            currentSubMenu = 1;
-          }
+        if (cursorPosition == 17)
+        {
+          currentSubMenu = (currentSubMenu == 1) ? 2 : 1;
         }
       }
     }
@@ -386,17 +421,15 @@ void millisCounter(void)
       {
         cursorPosition--;
       }
-      if (currentMenu == 1 && currentSubMenu ==0)
+      if (currentMenu == 1 && currentSubMenu == 0)
       {
         cursorPosition--;
-      }else if (currentMenu == 1 && currentSubMenu != 0)
+      }
+      else if (currentMenu == 1 && currentSubMenu != 0)
       {
-        if(cursorPosition == 11){
-          if(currentSubMenu == 1){
-            currentSubMenu = 2;
-          }else if(currentSubMenu == 2){
-            currentSubMenu = 1;
-          }
+        if (cursorPosition == 17)
+        {
+          currentSubMenu = (currentSubMenu == 1) ? 2 : 1;
         }
       }
     }
@@ -432,7 +465,8 @@ void millisCounter(void)
       {
         currentMenu = 0;
         cursorPosition = 0;
-      }else if (currentMenu == 1 && currentSubMenu != 0)
+      }
+      else if (currentMenu == 1 && currentSubMenu != 0)
       {
         currentSubMenu = 0;
       }
@@ -681,67 +715,139 @@ void updateDisplaySetting()
   {
     return;
   }
-  
-  if(currentSubMenu > 0){
+
+  if (currentSubMenu > 0)
+  {
     return;
   }
   String newDataLine1 = "";
   String newDataLine2 = "";
-  // DEVICE NAME
-  // SSID
-  // PASSWORD
-  // MQTT SERVER
-  // IP ADDRESS
-  // GATEWAY
-  // SUBNET
-  // PRIMARY DNS
-  // SECONDARY DNS
-  // TIME FOR SEND DATA
-  // ALARM LIMIT
+  // String deviceName;
+  // String ssid;
+
+  // String password;
+  // String mqtt_server;
+
+  // String mqtt_port;
+  // String mqtt_user;
+
+  // String mqtt_password;
+  // String mqtt_topic;
+
+  // String mqtt_topic_sub;
+  // String mqtt_topic_pub;
+
+  // String ip_address;
+  // String gateway;
+
+  // String subnet;
+  // String primaryDNS;
+
+  // String secondaryDNS;
+  // String time_update;
+  
+  // String alarm_limit;
   // BOOT LOADER
 
   if (cursorPosition == 0)
   {
     newDataLine1 = ">DEVICE NAME";
-    newDataLine2 = "SSID";
-  }else if(cursorPosition == 1){
-    newDataLine1 = "DEVICE NAME";
+    newDataLine2 = " SSID";
+  }
+  else if (cursorPosition == 1)
+  {
+    newDataLine1 = " DEVICE NAME";
     newDataLine2 = ">SSID";
-  }else if(cursorPosition == 2){
+  }
+  else if (cursorPosition == 2)
+  {
     newDataLine1 = ">PASSWORD";
-    newDataLine2 = "MQTT SERVER";
-  }else if(cursorPosition == 3){
-    newDataLine1 = "PASSWORD";
+    newDataLine2 = " MQTT SERVER";
+  }
+  else if (cursorPosition == 3)
+  {
+    newDataLine1 = " PASSWORD";
     newDataLine2 = ">MQTT SERVER";
-  }else if(cursorPosition == 4){
+  }
+  else if (cursorPosition == 4)
+  {
+    newDataLine1 = ">MQTT PORT";
+    newDataLine2 = " MQTT USER";
+  }
+  else if (cursorPosition == 5)
+  {
+    newDataLine1 = " MQTT PORT";
+    newDataLine2 = ">MQTT USER";
+  }
+  else if (cursorPosition == 6)
+  {
+    newDataLine1 = ">MQTT PASSWORD";
+    newDataLine2 = " MQTT TOPIC";
+  }
+  else if (cursorPosition == 7)
+  {
+    newDataLine1 = " MQTT PASSWORD";
+    newDataLine2 = ">MQTT TOPIC";
+  }
+  else if (cursorPosition == 8)
+  {
+    newDataLine1 = ">MQTT TOPIC SUB";
+    newDataLine2 = " MQTT TOPIC PUB";
+  }
+  else if (cursorPosition == 9)
+  {
+    newDataLine1 = " MQTT TOPIC SUB";
+    newDataLine2 = ">MQTT TOPIC PUB";
+  }
+  else if (cursorPosition == 10)
+  {
     newDataLine1 = ">IP ADDRESS";
-    newDataLine2 = "GATEWAY";
-  }else if(cursorPosition == 5){
-    newDataLine1 = "IP ADDRESS";
+    newDataLine2 = " GATEWAY";
+  }
+  else if (cursorPosition == 11)
+  {
+    newDataLine1 = " IP ADDRESS";
     newDataLine2 = ">GATEWAY";
-  }else if(cursorPosition == 6){
+  }
+  else if (cursorPosition == 12)
+  {
     newDataLine1 = ">SUBNET";
-    newDataLine2 = "PRIMARY DNS";
-  }else if(cursorPosition == 7){
-    newDataLine1 = "SUBNET";
+    newDataLine2 = " PRIMARY DNS";
+  }
+  else if (cursorPosition == 13)
+  {
+    newDataLine1 = " SUBNET";
     newDataLine2 = ">PRIMARY DNS";
-  }else if(cursorPosition == 8){
+  }
+  else if (cursorPosition == 14)
+  {
     newDataLine1 = ">SECONDARY DNS";
-    newDataLine2 = "TIME SEND DATA";
-  }else if(cursorPosition == 9){
-    newDataLine1 = "SECONDARY DNS";
+    newDataLine2 = " TIME SEND DATA";
+  }
+  else if (cursorPosition == 15)
+  {
+    newDataLine1 = " SECONDARY DNS";
     newDataLine2 = ">TIME SEND DATA";
-  }else if(cursorPosition == 10){
+  }
+  else if (cursorPosition == 16)
+  {
     newDataLine1 = ">ALARM LIMIT";
-    newDataLine2 = "BOOT LOADER";
-  }else if(cursorPosition == 11){
-    newDataLine1 = "ALARM LIMIT";
+    newDataLine2 = " BOOT LOADER";
+  }
+  else if (cursorPosition == 17)
+  {
+    newDataLine1 = " ALARM LIMIT";
     newDataLine2 = ">BOOT LOADER";
-  }else if(cursorPosition < 0){
-    cursorPosition = 11;
-  }else{
+  }
+  else if (cursorPosition < 0)
+  {
+    cursorPosition = 17;
+  }
+  else
+  {
     cursorPosition = 0;
   }
+
   // updateLCD
   updateLCD(newDataLine1, newDataLine2);
 }
@@ -752,60 +858,203 @@ void updateDisplaySubSetting()
   {
     return;
   }
-  
-  if(currentSubMenu == 0){
+
+  if (currentSubMenu == 0)
+  {
     return;
   }
 
   String newDataLine1 = "";
   String newDataLine2 = "";
 
-  if(cursorPosition == 0 && currentSubMenu == 1){
+  if (cursorPosition == 0 && currentSubMenu == 1)
+  {
     newDataLine1 = "DEVICE NAME :";
-    newDataLine2 = "MACHINE1";
+    String settingDeviceName = setting.deviceName;
+    // Remove \r \n
+    settingDeviceName.replace("\r", "");
+    settingDeviceName.replace("\n", "");
+
+    newDataLine2 = settingDeviceName;
   }
-  else if(cursorPosition == 1 && currentSubMenu == 1){
+  else if (cursorPosition == 1 && currentSubMenu == 1)
+  {
     newDataLine1 = "SSID :";
-    newDataLine2 = "Internet";
-  }else if(cursorPosition == 2 && currentSubMenu == 1){
+    String settingSSID = setting.ssid;
+    // Remove \r \n
+    settingSSID.replace("\r", "");
+    settingSSID.replace("\n", "");
+
+    newDataLine2 = settingSSID;
+  }
+  else if (cursorPosition == 2 && currentSubMenu == 1)
+  {
     newDataLine1 = "PASSWORD :";
-    newDataLine2 = "0987654321qw";
-  }else if(cursorPosition == 3 && currentSubMenu == 1){
+    String settingPassword = setting.password;
+    // Remove \r \n
+    settingPassword.replace("\r", "");
+    settingPassword.replace("\n", "");
+
+    newDataLine2 = settingPassword;
+  }
+  else if (cursorPosition == 3 && currentSubMenu == 1)
+  {
     newDataLine1 = "MQTT SERVER :";
-    newDataLine2 = "192.167.2.123";
-  }else if(cursorPosition == 4 && currentSubMenu == 1){
+    String settingMqttServer = setting.mqtt_server;
+    // Remove \r \n
+    settingMqttServer.replace("\r", "");
+    settingMqttServer.replace("\n", "");
+
+    newDataLine2 = settingMqttServer;
+  }
+  else if (cursorPosition == 4 && currentSubMenu == 1)
+  {
+    newDataLine1 = "MQTT PORT :";
+    String settingMqttPort = setting.mqtt_port;
+    // Remove \r \n
+    settingMqttPort.replace("\r", "");
+    settingMqttPort.replace("\n", "");
+
+    newDataLine2 = settingMqttPort;
+  }
+  else if (cursorPosition == 5 && currentSubMenu == 1)
+  {
+    newDataLine1 = "MQTT USER :";
+    String settingMqttUser = setting.mqtt_user;
+    // Remove \r \n
+    settingMqttUser.replace("\r", "");
+    settingMqttUser.replace("\n", "");
+
+    newDataLine2 = settingMqttUser;
+  }
+  else if (cursorPosition == 6 && currentSubMenu == 1)
+  {
+    newDataLine1 = "MQTT PASSWORD :";
+    String settingMqttPassword = setting.mqtt_password;
+    // Remove \r \n
+    settingMqttPassword.replace("\r", "");
+    settingMqttPassword.replace("\n", "");
+
+    newDataLine2 = settingMqttPassword;
+  }
+  else if (cursorPosition == 7 && currentSubMenu == 1)
+  {
+    newDataLine1 = "MQTT TOPIC :";
+    String settingMqttTopic = setting.mqtt_topic;
+    // Remove \r \n
+    settingMqttTopic.replace("\r", "");
+    settingMqttTopic.replace("\n", "");
+
+    newDataLine2 = settingMqttTopic;
+  }
+  else if (cursorPosition == 8 && currentSubMenu == 1)
+  {
+    newDataLine1 = "MQTT TOPIC SUB :";
+    String settingMqttTopicSub = setting.mqtt_topic_sub;
+    // Remove \r \n
+    settingMqttTopicSub.replace("\r", "");
+    settingMqttTopicSub.replace("\n", "");
+
+    newDataLine2 = settingMqttTopicSub;
+  }
+  else if (cursorPosition == 9 && currentSubMenu == 1)
+  {
+    newDataLine1 = "MQTT TOPIC PUB :";
+    String settingMqttTopicPub = setting.mqtt_topic_pub;
+    // Remove \r \n
+    settingMqttTopicPub.replace("\r", "");
+    settingMqttTopicPub.replace("\n", "");
+
+    newDataLine2 = settingMqttTopicPub;
+  }
+  else if (cursorPosition == 10 && currentSubMenu == 1)
+  {
     newDataLine1 = "IP ADDRESS :";
-    newDataLine2 = "192.168.1.125";
-  }else if(cursorPosition == 5 && currentSubMenu == 1){
+    String settingIpAddress = setting.ip_address;
+    // Remove \r \n
+    settingIpAddress.replace("\r", "");
+    settingIpAddress.replace("\n", "");
+
+    newDataLine2 = settingIpAddress;
+  }
+  else if (cursorPosition == 11 && currentSubMenu == 1)
+  {
     newDataLine1 = "GATEWAY :";
-    newDataLine2 = "10.10.10.10";
-  }else if(cursorPosition == 6 && currentSubMenu == 1){
+    String settingGateway = setting.gateway;
+    // Remove \r \n
+    settingGateway.replace("\r", "");
+    settingGateway.replace("\n", "");
+
+    newDataLine2 = settingGateway;
+  }
+  else if (cursorPosition == 12 && currentSubMenu == 1)
+  {
     newDataLine1 = "SUBNET :";
-    newDataLine2 = "255.255.0.0";
-  }else if(cursorPosition == 7 && currentSubMenu == 1){
+    String settingSubnet = setting.subnet;
+    // Remove \r \n
+    settingSubnet.replace("\r", "");
+    settingSubnet.replace("\n", "");
+
+    newDataLine2 = settingSubnet;
+  }
+  else if (cursorPosition == 13 && currentSubMenu == 1)
+  {
     newDataLine1 = "PRIMARY DNS :";
-    newDataLine2 = "8.8.8.8";
-  }else if(cursorPosition == 8 && currentSubMenu == 1){
+    String settingPrimaryDNS = setting.primaryDNS;
+    // Remove \r \n
+    settingPrimaryDNS.replace("\r", "");
+    settingPrimaryDNS.replace("\n", "");
+
+    newDataLine2 = settingPrimaryDNS;
+  }
+  else if (cursorPosition == 14 && currentSubMenu == 1)
+  {
     newDataLine1 = "SECONDARY DNS :";
-    newDataLine2 = "4.4.4.4";
-  }else if (cursorPosition == 9 && currentSubMenu == 1){
+    String settingSecondaryDNS = setting.secondaryDNS;
+    // Remove \r \n
+    settingSecondaryDNS.replace("\r", "");
+    settingSecondaryDNS.replace("\n", "");
+
+    newDataLine2 = settingSecondaryDNS;
+  }
+  else if (cursorPosition == 15 && currentSubMenu == 1)
+  {
     newDataLine1 = "TIME SEND DATA :";
-    newDataLine2 = "10";
-  }else if(cursorPosition == 10 && currentSubMenu == 1){
+    String settingTimeUpdate = setting.time_update;
+    // Remove \r \n
+    settingTimeUpdate.replace("\r", "");
+    settingTimeUpdate.replace("\n", "");
+
+    newDataLine2 = settingTimeUpdate;
+  }
+  else if (cursorPosition == 16 && currentSubMenu == 1)
+  {
     newDataLine1 = "ALARM LIMIT :";
-    newDataLine2 = "10";
-  }else if(cursorPosition == 11 && currentSubMenu == 1){
+    String settingAlarmLimit = setting.alarm_limit;
+    // Remove \r \n
+    settingAlarmLimit.replace("\r", "");
+    settingAlarmLimit.replace("\n", "");
+    newDataLine2 = settingAlarmLimit;
+  }
+  else if (cursorPosition == 17 && currentSubMenu == 1)
+  {
     newDataLine1 = "BOOT LOADER :";
     newDataLine2 = "NO";
-  }else if(cursorPosition == 11 && currentSubMenu == 2){
+  }
+  else if (cursorPosition == 17 && currentSubMenu == 2)
+  {
     newDataLine1 = "BOOT LOADER :";
     newDataLine2 = "YES";
-  }else if(cursorPosition < 0){
+  }
+  else if (cursorPosition < 0)
+  {
     cursorPosition = 11;
-  }else{
+  }
+  else
+  {
     cursorPosition = 0;
   }
- 
-// updateLCD
+
+  // updateLCD
   updateLCD(newDataLine1, newDataLine2);
 }
