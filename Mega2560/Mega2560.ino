@@ -7,7 +7,7 @@
 #include <Wire.h>
 #include "Setting.h"
 // ------------------   INPUT   ------------------ //
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Module IIC/I2C Interface บางรุ่นอาจจะใช้ 0x3f
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // Module IIC/I2C Interface บางรุ่นอาจจะใช้ 0x3f
 
 #define BTN_ESC_PIN 35
 void OnPress_ESC(void);
@@ -29,10 +29,10 @@ void OnPress_ENTER(void);
 void OnRelease_ENTER(void);
 TcBUTTON BTN_ENTER(BTN_ENTER_PIN);
 
-#define SD_CS 10   // | Mega 2560
-#define SD_MOSI 51 // | COPI 51
-#define SD_MISO 50 // | CIPO 50
-#define SD_SCK 52  // |  CSK 52
+#define SD_CS 53    // | Mega 2560
+#define SD_MOSI 51  // | COPI 51
+#define SD_MISO 50  // | CIPO 50
+#define SD_SCK 52   // |  CSK 52
 
 // ------------------  Analog INPUT   ------------------ //
 #define AC_VOLTAGE1_PIN A1
@@ -97,14 +97,17 @@ TcPINOUT LED9(LED9_PIN);
 #define LED10_PIN 31
 TcPINOUT LED10(LED10_PIN);
 
+
 #define BUZZER_PIN 7
 // ------------------ VARIABLES ------------------ //
 unsigned long previousMillis = 0;
 unsigned long previousMicros = 0;
 int CountNoBacklight = 0;
-const int NoBacklightTime = 60; // 60 seconds
+const int NoBacklightTime = 60;  // 60 seconds
 int countBackHome = 0;
-const int countBackHomeTime = 120; // 60 seconds
+const int countBackHomeTime = 120;  // 60 seconds
+int countReset = 0;
+const int countResetTime = 2;
 
 bool startReceived = false;
 bool endReceived = false;
@@ -113,7 +116,7 @@ byte _data[LENGTH];
 int dataIndex = 0;
 
 const int _OFFSET = 10000;
-const int BUFFER_SIZE = 512; // Adjust this based on your needs
+const int BUFFER_SIZE = 512;  // Adjust this based on your needs
 byte _buffer[BUFFER_SIZE];
 int bufferIndex = 0;
 
@@ -124,6 +127,7 @@ bool stateBTN_ESC = false;
 bool stateBTN_UP = false;
 bool stateBTN_DOWN = false;
 bool stateBTN_ENTER = false;
+bool stateBTN_IS_RELEASE = false;
 
 int currentMenu = 0;
 int currentSubMenu = 0;
@@ -131,52 +135,44 @@ int cursorPosition = 0;
 
 Setting setting;
 
-int status = 0; // 1.setup 2.update parameter 3.connect wifi 4.connect mqtt 5.ready
+bool isAlarm[10] = { false, false, false, false, false, false, false, false, false, false };
+
+int status = 0;  // 1.setup 2.update parameter 3.connect wifi 4.connect mqtt 5.ready
 int countUpdateParameter = 0;
 unsigned long previousMillisUpdateParameter = 0;
-const int timeUpdateParameter = 20; // 20ms
+const int timeUpdateParameter = 20;  // 20ms
 // ------------------   FUNCTIONS   ------------------ //
-void serialEvent()
-{
+void serialEvent() {
   Serial1.print("Mega1 :");
-  while (Serial.available())
-  {
+  while (Serial.available()) {
     byte incomeByte = Serial.read();
   }
 }
 String incomeString = "";
-void serialEvent3()
-{
+void serialEvent3() {
   Serial.print("Mega3 :");
-  while (Serial3.available())
-  {
+  while (Serial3.available()) {
     byte incomeByte = Serial3.read();
     // Serial.print((char)incomeByte);
     incomeString += (char)incomeByte;
 
-    if (incomeByte == START_BYTE)
-    {
+    if (incomeByte == START_BYTE) {
       startReceived = true;
       endReceived = false;
       dataIndex = 0;
       _data[dataIndex] = incomeByte;
-    }
-    else if (startReceived && dataIndex < LENGTH - 1)
-    {
+    } else if (startReceived && dataIndex < LENGTH - 1) {
       dataIndex++;
       _data[dataIndex] = incomeByte;
-      if (incomeByte == END_BYTE)
-      {
-        handleDataChunk(_data, dataIndex + 1); // Include the 0x03 byte in this case
+      if (incomeByte == END_BYTE) {
+        handleDataChunk(_data, dataIndex + 1);  // Include the 0x03 byte in this case
         startReceived = false;
         endReceived = true;
         memset(_data, 0, sizeof(_data));
-      }
-      else if (dataIndex >= LENGTH - 1)
-      {
+      } else if (dataIndex >= LENGTH - 1) {
         handleDataChunk(_data, LENGTH);
         // Reset for the next chunk
-        dataIndex = -1; // Setting to -1 because it will be incremented in the next loop cycle
+        dataIndex = -1;  // Setting to -1 because it will be incremented in the next loop cycle
         memset(_data, 0, sizeof(_data));
       }
     }
@@ -185,26 +181,22 @@ void serialEvent3()
   incomeString = "";
 }
 
-void handleDataChunk(byte *data, int len)
-{
-  if (bufferIndex + len > BUFFER_SIZE)
-  {
+void handleDataChunk(byte *data, int len) {
+  if (bufferIndex + len > BUFFER_SIZE) {
     // Buffer overflow handling
     // For this example, we'll just reset the buffer,
     // but you might want to handle this differently
     bufferIndex = 0;
   }
   // Copy the data to the buffer
-  for (int i = 0; i < len; i++)
-  {
+  for (int i = 0; i < len; i++) {
     _buffer[bufferIndex] = data[i];
     bufferIndex++;
   }
 }
 
 // ------------------   SETUP   ------------------ //
-void setup()
-{
+void setup() {
   Serial.begin(115200);
   Serial3.begin(115200);
 
@@ -235,19 +227,11 @@ void setup()
 
   lcd.begin();
   lcd.backlight();
-  // lcd.noBacklight();
+
   lcd.clear();
-  // lcd.setCursor(0, 0);
-  // lcd.print("RMS Voltage:");
-  // lcd.setCursor(0, 1);
-  // lcd.clear();
-  // lcd.print("RMS Voltage:");
-  // lcd.setCursor(0, 1);
-  // lcd.cursor();
   CountNoBacklight = NoBacklightTime;
 
-  if (!SD.begin(SD_CS))
-  {
+  if (!SD.begin(SD_CS)) {
     Serial.println("SD card not found");
     lcd.setCursor(0, 0);
     lcd.print("SD Card");
@@ -258,14 +242,14 @@ void setup()
   }
 
   setting.readFromSD();
+
+  // RESET.on();
 }
 // ------------------   LOOP   ------------------ //
-void loop()
-{
+void loop() {
 
   handleBufferedData();
-  if (status == 1)
-  {
+  if (status == 1) {
     // Send parameter to ESPs
     updateParameterToESP();
     String newDataLine1 = "Connect to WiFi";
@@ -279,11 +263,9 @@ void loop()
 
     // Update to LCD
     updateLCD(newDataLine1, newDataLine2);
-  }else if(status == 2){
+  } else if (status == 2) {
     // Connect to WiFi
-  }
-  else if (status == 5)
-  {
+  } else if (status == 5) {
     BTN_ESC.update();
     BTN_UP.update();
     BTN_DOWN.update();
@@ -304,15 +286,12 @@ void loop()
     millisCounter();
   }
 }
-void updateParameterToESP()
-{
+void updateParameterToESP() {
   unsigned long currentMillisUpdateParameter = millis();
-  if (currentMillisUpdateParameter - previousMillisUpdateParameter >= timeUpdateParameter)
-  {
+  if (currentMillisUpdateParameter - previousMillisUpdateParameter >= timeUpdateParameter) {
     previousMillisUpdateParameter = currentMillisUpdateParameter;
     countUpdateParameter++;
-    if (countUpdateParameter == 1)
-    {
+    if (countUpdateParameter == 1) {
       // Device name
       // 02 55 ***** 03
       String deviceName = setting.deviceName;
@@ -332,9 +311,7 @@ void updateParameterToESP()
       memcpy(&data[3], deviceNameBytes, sizeof(deviceNameBytes));
       data[sizeof(deviceNameBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 2)
-    {
+    } else if (countUpdateParameter == 2) {
       // SSID
       // 02 55 ***** 03
       String ssid = setting.ssid;
@@ -354,9 +331,7 @@ void updateParameterToESP()
       memcpy(&data[3], ssidBytes, sizeof(ssidBytes));
       data[sizeof(ssidBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 3)
-    {
+    } else if (countUpdateParameter == 3) {
       // Password
       // 02 55 ***** 03
       String password = setting.password;
@@ -376,9 +351,7 @@ void updateParameterToESP()
       memcpy(&data[3], passwordBytes, sizeof(passwordBytes));
       data[sizeof(passwordBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 4)
-    {
+    } else if (countUpdateParameter == 4) {
       // MQTT Server
       // 02 55 ***** 03
       String mqtt_server = setting.mqtt_server;
@@ -398,9 +371,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_serverBytes, sizeof(mqtt_serverBytes));
       data[sizeof(mqtt_serverBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 5)
-    {
+    } else if (countUpdateParameter == 5) {
       // MQTT Port
       // 02 55 ***** 03
       String mqtt_port = setting.mqtt_port;
@@ -420,9 +391,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_portBytes, sizeof(mqtt_portBytes));
       data[sizeof(mqtt_portBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 6)
-    {
+    } else if (countUpdateParameter == 6) {
       // MQTT User
       // 02 55 ***** 03
       String mqtt_user = setting.mqtt_user;
@@ -442,9 +411,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_userBytes, sizeof(mqtt_userBytes));
       data[sizeof(mqtt_userBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 7)
-    {
+    } else if (countUpdateParameter == 7) {
       // MQTT Password
       // 02 55 ***** 03
       String mqtt_password = setting.mqtt_password;
@@ -464,9 +431,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_passwordBytes, sizeof(mqtt_passwordBytes));
       data[sizeof(mqtt_passwordBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 8)
-    {
+    } else if (countUpdateParameter == 8) {
       // MQTT Topic
       // 02 55 ***** 03
       String mqtt_topic = setting.mqtt_topic;
@@ -486,9 +451,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_topicBytes, sizeof(mqtt_topicBytes));
       data[sizeof(mqtt_topicBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 9)
-    {
+    } else if (countUpdateParameter == 9) {
       // MQTT Topic Sub
       // 02 55 ***** 03
       String mqtt_topic_sub = setting.mqtt_topic_sub;
@@ -508,9 +471,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_topic_subBytes, sizeof(mqtt_topic_subBytes));
       data[sizeof(mqtt_topic_subBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 10)
-    {
+    } else if (countUpdateParameter == 10) {
       // MQTT Topic Pub
       // 02 55 ***** 03
       String mqtt_topic_pub = setting.mqtt_topic_pub;
@@ -530,9 +491,7 @@ void updateParameterToESP()
       memcpy(&data[3], mqtt_topic_pubBytes, sizeof(mqtt_topic_pubBytes));
       data[sizeof(mqtt_topic_pubBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 11)
-    {
+    } else if (countUpdateParameter == 11) {
       // IP Address
       // 02 55 ***** 03
       String ip_address = setting.ip_address;
@@ -552,9 +511,7 @@ void updateParameterToESP()
       memcpy(&data[3], ip_addressBytes, sizeof(ip_addressBytes));
       data[sizeof(ip_addressBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 12)
-    {
+    } else if (countUpdateParameter == 12) {
       // Gateway
       // 02 55 ***** 03
       String gateway = setting.gateway;
@@ -574,9 +531,7 @@ void updateParameterToESP()
       memcpy(&data[3], gatewayBytes, sizeof(gatewayBytes));
       data[sizeof(gatewayBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 13)
-    {
+    } else if (countUpdateParameter == 13) {
       // Subnet
       // 02 55 ***** 03
       String subnet = setting.subnet;
@@ -596,9 +551,7 @@ void updateParameterToESP()
       memcpy(&data[3], subnetBytes, sizeof(subnetBytes));
       data[sizeof(subnetBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 14)
-    {
+    } else if (countUpdateParameter == 14) {
       // Primary DNS
       // 02 55 ***** 03
       String primaryDNS = setting.primaryDNS;
@@ -618,9 +571,7 @@ void updateParameterToESP()
       memcpy(&data[3], primaryDNSBytes, sizeof(primaryDNSBytes));
       data[sizeof(primaryDNSBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter == 15)
-    {
+    } else if (countUpdateParameter == 15) {
       // Secondary DNS
       // 02 55 ***** 03
       String secondaryDNS = setting.secondaryDNS;
@@ -640,60 +591,48 @@ void updateParameterToESP()
       memcpy(&data[3], secondaryDNSBytes, sizeof(secondaryDNSBytes));
       data[sizeof(secondaryDNSBytes) + 3] = END_BYTE;
       Serial3.write(data, sizeof(data));
-    }
-    else if (countUpdateParameter >= 16)
-    {
+    } else if (countUpdateParameter >= 16) {
       // Finish
       // 02 43 C0 00 00 00 00 03
-      byte data[8] = {0x02, 0x43, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x03};
+      byte data[8] = { 0x02, 0x43, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x03 };
       Serial3.write(data, sizeof(data));
       status = 2;
     }
-  }else if (currentMillisUpdateParameter < previousMillisUpdateParameter)
-  { // Overflow
+  } else if (currentMillisUpdateParameter < previousMillisUpdateParameter) {  // Overflow
     previousMillisUpdateParameter = currentMillisUpdateParameter;
   }
 }
 
-void stringToAsciiBytes(const String &input, byte *output, unsigned int outputSize)
-{
+void stringToAsciiBytes(const String &input, byte *output, unsigned int outputSize) {
   // Clear the output array (especially important if the string is shorter than the maximum length)
   memset(output, 0, outputSize);
 
   // Ensure we don't exceed the buffer size
   unsigned int inputLength = input.length();
-  if (inputLength > outputSize)
-  {
+  if (inputLength > outputSize) {
     inputLength = outputSize;
   }
 
   // Iterate over each character in the string, converting it to ASCII
-  for (unsigned int i = 0; i < inputLength; i++)
-  {
+  for (unsigned int i = 0; i < inputLength; i++) {
     output[i] = (byte)input.charAt(i);
   }
 }
 // ------------------  FUNCTIONS SERIAL  ------------------ //
-void handleBufferedData()
-{
-  if (!endReceived)
-  {
+void handleBufferedData() {
+  if (!endReceived) {
     return;
   }
-  if (_buffer[0] == START_BYTE && _buffer[bufferIndex - 1] == END_BYTE)
-  {
+  if (_buffer[0] == START_BYTE && _buffer[bufferIndex - 1] == END_BYTE) {
     processBufferedMessage();
   }
   resetBuffer();
 }
 
-void processBufferedMessage()
-{
-  if (bufferIndex == 8)
-  {
+void processBufferedMessage() {
+  if (bufferIndex == 8) {
     // 0x02, 0x55, 0x53, 0x00, 0x00, 0x00, 0x01, 0x03
-    if (_buffer[1] == 0x55 && _buffer[2] == 0x53 && _buffer[6] == 0x01)
-    {
+    if (_buffer[1] == 0x55 && _buffer[2] == 0x53 && _buffer[6] == 0x01) {
       // If you have any processing related to this condition, put it here
       // Serial1.write(_buffer, bufferIndex);
       status = 1;
@@ -701,17 +640,14 @@ void processBufferedMessage()
       tone(BUZZER_PIN, 2500, 50);
     }
     // 0x02, 0x55, 0x53, 0x00, 0x00, 0x00, 0x01, 0x03
-    if (_buffer[1] == 0x55 && _buffer[2] == 0x53 && _buffer[6] == 0xA1)
-    {
+    if (_buffer[1] == 0x55 && _buffer[2] == 0x53 && _buffer[6] == 0xA1) {
       // If you have any processing related to this condition, put it here
       // Serial1.write(_buffer, bufferIndex);
       status = 5;
       countUpdateParameter = 0;
       tone(BUZZER_PIN, 2500, 50);
     }
-  }
-  else if (_buffer[1] == 0x43 && _buffer[2] == 0x44)
-  {
+  } else if (_buffer[1] == 0x43 && _buffer[2] == 0x44) {
     // If you have any processing related to this condition, put it here
     // Serial1.write(_buffer, bufferIndex);
   }
@@ -719,50 +655,41 @@ void processBufferedMessage()
   tone(BUZZER_PIN, 2500, 50);
 }
 
-void resetBuffer()
-{
+void resetBuffer() {
   endReceived = false;
   bufferIndex = 0;
   memset(_buffer, 0, BUFFER_SIZE);
 }
 
 // ------------------   FUNCTIONS   ------------------ //
-void SecondsCounter(void)
-{
+void SecondsCounter(void) {
   unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= 1000)
-  {
+  if (currentMillis - previousMillis >= 1000) {
     previousMillis = currentMillis;
-    if (CountNoBacklight > 0)
-    {
+    if (CountNoBacklight > 0) {
       CountNoBacklight--;
-      if (CountNoBacklight <= 0)
-      {
+      if (CountNoBacklight <= 0) {
         lcd.noBacklight();
         CountNoBacklight = 0;
       }
     }
-    if (countBackHome > 0)
-    {
+    if (countBackHome > 0) {
       countBackHome--;
-      if (countBackHome <= 0)
-      {
+      if (countBackHome <= 0) {
         currentMenu = 0;
         cursorPosition = 0;
         countBackHome = 0;
       }
     }
-  }
-  else if (currentMillis < previousMillis)
-  { // Overflow
+  } else if (currentMillis < previousMillis) {  // Overflow
     previousMillis = currentMillis;
   }
 }
 
-void millisCounter(void)
-{
+int counterSentData = 0;
+void millisCounter(void) {
   unsigned long currentMicros = millis();
-  if (currentMicros - previousMicros >= 100) // 100 ms
+  if (currentMicros - previousMicros >= 100)  // 100 ms
   {
     previousMicros = currentMicros;
 
@@ -776,246 +703,331 @@ void millisCounter(void)
     uint32_t ch08 = acVoltageA8.getVoltageRMS();
     uint32_t ch09 = acVoltageA9.getVoltageRMS();
     uint32_t ch10 = acVoltageA10.getVoltageRMS();
-
     int limit = setting.alarm_limit.toInt();
 
-    if(ch01 > limit){
+    counterSentData++;
+    if (counterSentData == 1) {
+      String message = "";
+      // "CH1:1,CH2:2,CH3:3,CH4:4,CH5:5,CH6:6,CH7:7,CH8:8,CH9:9,CH10:10"
+      message += "CH1:";
+      message += String(ch01);
+      message += ",CH2:";
+      message += String(ch02);
+      message += ",CH3:";
+      message += String(ch03);
+      message += ",CH4:";
+      message += String(ch04);
+      message += ",CH5:";
+      message += String(ch05);
+      message += ",CH6:";
+      message += String(ch06);
+      message += ",CH7:";
+      message += String(ch07);
+      message += ",CH8:";
+      message += String(ch08);
+      message += ",CH9:";
+      message += String(ch09);
+      message += ",CH10:";
+      message += String(ch10);
+      message += "<";
+
+      // Send to ESP
+      byte data[message.length() + 4];
+      data[0] = START_BYTE;
+      data[1] = 0x55;
+      data[2] = 0x54;
+
+      // Convert to ASCII bytes
+      byte messageBytes[message.length()];
+      stringToAsciiBytes(message, messageBytes, sizeof(messageBytes));
+      memcpy(&data[3], messageBytes, sizeof(messageBytes));
+      data[message.length() + 3] = END_BYTE;
+      Serial3.write(data, sizeof(data));
+    }
+
+    int interval = setting.interval.toInt();
+    if (counterSentData > interval * 10) {
+      counterSentData = 0;
+    }
+// -------------- CH 1 -------------- //
+    if (ch01 > limit) {
       LED1.on();
-    }else{
+      if (isAlarm[0] == false) {
+        isAlarm[0] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED1.off();
+      if (isAlarm[0] == true) {
+        isAlarm[0] = false;
+      }
     }
 
-    if(ch02 > limit){
+    // -------------- CH 2 -------------- //
+    if (ch02 > limit) {
       LED2.on();
-    }else{
+      if (isAlarm[1] == false) {
+        isAlarm[1] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED2.off();
+      if (isAlarm[1] == true) {
+        isAlarm[1] = false;
+      }
     }
-
-    if(ch03 > limit){
+// -------------- CH 3 -------------- //
+    if (ch03 > limit) {
       LED3.on();
-    }else{
+      if (isAlarm[2] == false) {
+        isAlarm[2] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED3.off();
+      if (isAlarm[2] == true) {
+        isAlarm[2] = false;
+      }
     }
-
-    if(ch04 > limit){
+    // -------------- CH 4 -------------- //
+    if (ch04 > limit) {
       LED4.on();
-    }else{
+      if (isAlarm[3] == false) {
+        isAlarm[3] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED4.off();
+      if (isAlarm[3] == true) {
+        isAlarm[3] = false;
+      }
     }
 
-    if(ch05 > limit){
+// -------------- CH 5 -------------- //
+    if (ch05 > limit) {
       LED5.on();
-    }else{
+      if (isAlarm[4] == false) {
+        isAlarm[4] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED5.off();
+      if (isAlarm[4] == true) {
+        isAlarm[4] = false;
+      }
     }
-
-    if(ch06 > limit){
+// -------------- CH 6 -------------- //
+    if (ch06 > limit) {
       LED6.on();
-    }else{
+      if (isAlarm[5] == false) {
+        isAlarm[5] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED6.off();
+      if (isAlarm[5] == true) {
+        isAlarm[5] = false;
+      }
     }
 
-    if(ch07 > limit){
+    // -------------- CH 7 -------------- //
+    if (ch07 > limit) {
       LED7.on();
-    }else{
+      if (isAlarm[6] == false) {
+        isAlarm[6] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED7.off();
+      if (isAlarm[6] == true) {
+        isAlarm[6] = false;
+      }
     }
 
-    if(ch08 > limit){
+    // -------------- CH 8 -------------- //
+
+    if (ch08 > limit) {
       LED8.on();
-    }else{
+      if (isAlarm[7] == false) {
+        isAlarm[7] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED8.off();
+      if (isAlarm[7] == true) {
+        isAlarm[7] = false;
+      }
     }
+    // -------------- CH 9 -------------- //
 
-    if(ch09 > limit){
+    if (ch09 > limit) {
       LED9.on();
-    }else{
+      if (isAlarm[8] == false) {
+        isAlarm[8] = true;
+        counterSentData = 0;
+      }
+    } else {
       LED9.off();
+      if (isAlarm[8] == true) {
+        isAlarm[8] = false;
+      }
+    }
+    // -------------- CH 10 -------------- //
+    if (ch10 > limit) {
+      LED10.on();
+      if (isAlarm[9] == false) {
+        isAlarm[9] = true;
+        counterSentData = 0;
+      }
+    } else {
+      LED10.off();
+      if (isAlarm[9] == true) {
+        isAlarm[9] = false;
+      }
     }
 
-    if(ch10 > limit){
-      LED10.on();
-    }else{
-      LED10.off();
-    }
+    // -------------- END -------------- //
+
     
-    
-    // ESC UP  DOWN  ENTER = 2^4 = 16 case
-    // 0 0 0 0
-    if (!stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Not press
-    }
-    // 0 0 0 1
-    else if (!stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press ENTER
-      Serial.println("ENTER");
-      if (currentMenu == 0)
-      {
-      }
-      else if (currentMenu == 1 && currentSubMenu == 0)
-      {
-        currentSubMenu = 1;
-      }
-      else if (currentMenu == 1 && currentSubMenu != 0)
-      {
-        if (cursorPosition == 17 && currentSubMenu == 1)
-        {
-        }
-        else if (cursorPosition == 17 && currentSubMenu == 2)
-        {
-          // Send data to ESP For update
-        }
-      }
-      {
-        currentSubMenu = 1;
-      }
-    }
-    // 0 0 1 0
-    else if (!stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press DOWN
-      Serial.println("DOWN");
-      if (currentMenu == 0)
-      {
-        cursorPosition++;
-      }
-      if (currentMenu == 1 && currentSubMenu == 0)
-      {
-        cursorPosition++;
-      }
-      else if (currentMenu == 1 && currentSubMenu != 0)
-      {
-        if (cursorPosition == 17)
-        {
-          currentSubMenu = (currentSubMenu == 1) ? 2 : 1;
-        }
-      }
-    }
-    // 0 0 1 1
-    else if (!stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press DOWN ENTER
-      Serial.println("DOWN ENTER");
-    }
-    // 0 1 0 0
-    else if (!stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press UP
-      Serial.println("UP");
-      if (currentMenu == 0)
-      {
-        cursorPosition--;
-      }
-      if (currentMenu == 1 && currentSubMenu == 0)
-      {
-        cursorPosition--;
-      }
-      else if (currentMenu == 1 && currentSubMenu != 0)
-      {
-        if (cursorPosition == 17)
-        {
-          currentSubMenu = (currentSubMenu == 1) ? 2 : 1;
-        }
-      }
-    }
-    // 0 1 0 1
-    else if (!stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press UP ENTER
-      Serial.println("UP ENTER");
-    }
-    // 0 1 1 0
-    else if (!stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press UP DOWN
-      Serial.println("UP DOWN");
-    }
-    // 0 1 1 1
-    else if (!stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press UP DOWN ENTER
-      Serial.println("UP DOWN ENTER");
-    }
-    // 1 0 0 0
-    else if (stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press ESC
-      Serial.println("ESC");
-      if (currentMenu == 0)
-      {
-        currentMenu = 1;
-        cursorPosition = 0;
-      }
-      else if (currentMenu == 1 && currentSubMenu == 0)
-      {
-        currentMenu = 0;
-        cursorPosition = 0;
-      }
-      else if (currentMenu == 1 && currentSubMenu != 0)
-      {
-        currentSubMenu = 0;
-      }
-    }
-    // 1 0 0 1
-    else if (stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press ESC ENTER
-      Serial.println("ESC ENTER");
-    }
-    // 1 0 1 0
-    else if (stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press ESC DOWN
-      Serial.println("ESC DOWN");
-    }
-    // 1 0 1 1
-    else if (stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press ESC DOWN ENTER
-      Serial.println("ESC DOWN ENTER");
-    }
-    // 1 1 0 0
-    else if (stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press ESC UP
-      Serial.println("ESC UP");
-    }
-    // 1 1 0 1
-    else if (stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press ESC UP ENTER
-      Serial.println("ESC UP ENTER");
-    }
-    // 1 1 1 0
-    else if (stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER)
-    {
-      // Press ESC UP DOWN
-      Serial.println("ESC UP DOWN");
-    }
-    // 1 1 1 1
-    else if (stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER)
-    {
-      // Press ESC UP DOWN ENTER
-      Serial.println("ESC UP DOWN ENTER");
-    }
+    StateButtonPress();
     updateDisplay();
     // Clear state
     stateBTN_ESC = false;
     stateBTN_UP = false;
     stateBTN_DOWN = false;
     stateBTN_ENTER = false;
-  }
-  else if (currentMicros < previousMicros)
-  { // Overflow
+    stateBTN_IS_RELEASE = false;
+  } else if (currentMicros < previousMicros) {  // Overflow
     previousMicros = currentMicros;
   }
 }
-
+// ------------------ STATE BUTTON PRESS ------------------ //
+void StateButtonPress() {
+  // ESC UP  DOWN  ENTER = 2^4 = 16 case
+  // 0 0 0 0 (IS RELEASE = 1)
+  if (!stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER && stateBTN_IS_RELEASE) {
+    // Not press
+    countReset = 0;
+  }
+  // 0 0 0 1
+  else if (!stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER) {
+    // Press ENTER
+    Serial.println("ENTER");
+    if (currentMenu == 0) {
+    } else if (currentMenu == 1 && currentSubMenu == 0) {
+      currentSubMenu = 1;
+    } else if (currentMenu == 1 && currentSubMenu != 0) {
+      if (cursorPosition == 17 && currentSubMenu == 1) {
+      } else if (cursorPosition == 17 && currentSubMenu == 2) {
+        // Send data to ESP For update
+      }
+    }
+    {
+      currentSubMenu = 1;
+    }
+  }
+  // 0 0 1 0
+  else if (!stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press DOWN
+    Serial.println("DOWN");
+    if (currentMenu == 0) {
+      cursorPosition++;
+    }
+    if (currentMenu == 1 && currentSubMenu == 0) {
+      cursorPosition++;
+    } else if (currentMenu == 1 && currentSubMenu != 0) {
+      if (cursorPosition == 17) {
+        currentSubMenu = (currentSubMenu == 1) ? 2 : 1;
+      }
+    }
+  }
+  // 0 0 1 1
+  else if (!stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER) {
+    // Press DOWN ENTER
+    Serial.println("DOWN ENTER");
+  }
+  // 0 1 0 0
+  else if (!stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press UP
+    Serial.println("UP");
+    if (currentMenu == 0) {
+      cursorPosition--;
+    }
+    if (currentMenu == 1 && currentSubMenu == 0) {
+      cursorPosition--;
+    } else if (currentMenu == 1 && currentSubMenu != 0) {
+      if (cursorPosition == 17) {
+        currentSubMenu = (currentSubMenu == 1) ? 2 : 1;
+      }
+    }
+  }
+  // 0 1 0 1
+  else if (!stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER) {
+    // Press UP ENTER
+    Serial.println("UP ENTER");
+  }
+  // 0 1 1 0
+  else if (!stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press UP DOWN
+    Serial.println("UP DOWN");
+  }
+  // 0 1 1 1
+  else if (!stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER) {
+    // Press UP DOWN ENTER
+    Serial.println("UP DOWN ENTER");
+  }
+  // 1 0 0 0
+  else if (stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press ESC
+    Serial.println("ESC");
+    if (currentMenu == 0) {
+      currentMenu = 1;
+      cursorPosition = 0;
+    } else if (currentMenu == 1 && currentSubMenu == 0) {
+      currentMenu = 0;
+      cursorPosition = 0;
+    } else if (currentMenu == 1 && currentSubMenu != 0) {
+      currentSubMenu = 0;
+    }
+  }
+  // 1 0 0 1
+  else if (stateBTN_ESC && !stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER) {
+    // Press ESC ENTER
+    Serial.println("ESC ENTER");
+  }
+  // 1 0 1 0
+  else if (stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press ESC DOWN
+    Serial.println("ESC DOWN");
+  }
+  // 1 0 1 1
+  else if (stateBTN_ESC && !stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER) {
+    // Press ESC DOWN ENTER
+    Serial.println("ESC DOWN ENTER");
+  }
+  // 1 1 0 0
+  else if (stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press ESC UP
+    Serial.println("ESC UP");
+  }
+  // 1 1 0 1
+  else if (stateBTN_ESC && stateBTN_UP && !stateBTN_DOWN && stateBTN_ENTER) {
+    // Press ESC UP ENTER
+    Serial.println("ESC UP ENTER");
+  }
+  // 1 1 1 0
+  else if (stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && !stateBTN_ENTER) {
+    // Press ESC UP DOWN
+    Serial.println("ESC UP DOWN");
+  }
+  // 1 1 1 1
+  else if (stateBTN_ESC && stateBTN_UP && stateBTN_DOWN && stateBTN_ENTER) {
+    // Press ESC UP DOWN ENTER
+    Serial.println("ESC UP DOWN ENTER");
+  }
+}
 // ------------------   ESC  ------------------ //
-void OnPress_ESC(void)
-{
+void OnPress_ESC(void) {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
   countBackHome = countBackHomeTime;
@@ -1025,12 +1037,11 @@ void OnPress_ESC(void)
   // Serial3.println("Hi ESP From Mega ESC Press");
 }
 
-void OnRelease_ESC(void)
-{
+void OnRelease_ESC(void) {
+  stateBTN_IS_RELEASE = true;
 }
 // ------------------   UP  ------------------ //
-void OnPress_UP(void)
-{
+void OnPress_UP(void) {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
   countBackHome = countBackHomeTime;
@@ -1038,13 +1049,12 @@ void OnPress_UP(void)
   previousMicros = millis();
   stateBTN_UP = true;
 }
-void OnRelease_UP(void)
-{
+void OnRelease_UP(void) {
+  stateBTN_IS_RELEASE = true;
 }
 
 // ------------------   DOWN  ------------------ //
-void OnPress_DOWN(void)
-{
+void OnPress_DOWN(void) {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
   countBackHome = countBackHomeTime;
@@ -1053,13 +1063,12 @@ void OnPress_DOWN(void)
   stateBTN_DOWN = true;
 }
 
-void OnRelease_DOWN(void)
-{
+void OnRelease_DOWN(void) {
+  stateBTN_IS_RELEASE = true;
 }
 
 // ------------------   ENTER  ------------------ //
-void OnPress_ENTER(void)
-{
+void OnPress_ENTER(void) {
   tone(BUZZER_PIN, 2500, 100);
   CountNoBacklight = NoBacklightTime;
   countBackHome = countBackHomeTime;
@@ -1068,39 +1077,31 @@ void OnPress_ENTER(void)
   stateBTN_ENTER = true;
 }
 
-void OnRelease_ENTER(void)
-{
+void OnRelease_ENTER(void) {
+  stateBTN_IS_RELEASE = true;
 }
 
 // ------------------   END  ------------------ //
 
-void updateDisplay()
-{
+void updateDisplay() {
   updateDisplay1();
   updateDisplaySetting();
   updateDisplaySubSetting();
 }
-String currentLine1 = "                "; //  16 ตัว
-String currentLine2 = "                "; //  16 ตัว
+String currentLine1 = "                ";  //  16 ตัว
+String currentLine2 = "                ";  //  16 ตัว
 
-void updateLCD(const String &newDataLine1, const String &newDataLine2)
-{
+void updateLCD(const String &newDataLine1, const String &newDataLine2) {
   // Line 1
-  for (int i = 0; i < 16; i++)
-  {
-    if (i < newDataLine1.length())
-    {
-      if (newDataLine1[i] != currentLine1[i])
-      {
+  for (int i = 0; i < 16; i++) {
+    if (i < newDataLine1.length()) {
+      if (newDataLine1[i] != currentLine1[i]) {
         lcd.setCursor(i, 0);
         lcd.print(newDataLine1[i]);
         currentLine1[i] = newDataLine1[i];
       }
-    }
-    else
-    {
-      if (currentLine1[i] != ' ')
-      {
+    } else {
+      if (currentLine1[i] != ' ') {
         lcd.setCursor(i, 0);
         lcd.print(' ');
         currentLine1[i] = ' ';
@@ -1109,21 +1110,15 @@ void updateLCD(const String &newDataLine1, const String &newDataLine2)
   }
 
   // Line 2
-  for (int i = 0; i < 16; i++)
-  {
-    if (i < newDataLine2.length())
-    {
-      if (newDataLine2[i] != currentLine2[i])
-      {
+  for (int i = 0; i < 16; i++) {
+    if (i < newDataLine2.length()) {
+      if (newDataLine2[i] != currentLine2[i]) {
         lcd.setCursor(i, 1);
         lcd.print(newDataLine2[i]);
         currentLine2[i] = newDataLine2[i];
       }
-    }
-    else
-    {
-      if (currentLine2[i] != ' ')
-      {
+    } else {
+      if (currentLine2[i] != ' ') {
         lcd.setCursor(i, 1);
         lcd.print(' ');
         currentLine2[i] = ' ';
@@ -1132,207 +1127,117 @@ void updateLCD(const String &newDataLine1, const String &newDataLine2)
   }
 }
 
-void updateDisplay1()
-{
-  if (currentMenu != 0)
-  {
+void updateDisplay1() {
+  if (currentMenu != 0) {
     return;
   }
   String newDataLine1 = "";
   String newDataLine2 = "";
-  if (cursorPosition == 0)
-  {
+  if (cursorPosition == 0) {
     newDataLine1 = "CH-1 : " + String(acVoltageA1.getVoltageRMS()) + " V";
     newDataLine2 = "CH-2 : " + String(acVoltageA2.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 1)
-  {
+  } else if (cursorPosition == 1) {
     newDataLine1 = "CH-2 : " + String(acVoltageA2.getVoltageRMS()) + " V";
     newDataLine2 = "CH-3 : " + String(acVoltageA3.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 2)
-  {
+  } else if (cursorPosition == 2) {
     newDataLine1 = "CH-3 : " + String(acVoltageA3.getVoltageRMS()) + " V";
     newDataLine2 = "CH-4 : " + String(acVoltageA4.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 3)
-  {
+  } else if (cursorPosition == 3) {
     newDataLine1 = "CH-4 : " + String(acVoltageA4.getVoltageRMS()) + " V";
     newDataLine2 = "CH-5 : " + String(acVoltageA5.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 4)
-  {
+  } else if (cursorPosition == 4) {
     newDataLine1 = "CH-5 : " + String(acVoltageA5.getVoltageRMS()) + " V";
     newDataLine2 = "CH-6 : " + String(acVoltageA6.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 5)
-  {
+  } else if (cursorPosition == 5) {
     newDataLine1 = "CH-6 : " + String(acVoltageA6.getVoltageRMS()) + " V";
     newDataLine2 = "CH-7 : " + String(acVoltageA7.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 6)
-  {
+  } else if (cursorPosition == 6) {
     newDataLine1 = "CH-7 : " + String(acVoltageA7.getVoltageRMS()) + " V";
     newDataLine2 = "CH-8 : " + String(acVoltageA8.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 7)
-  {
+  } else if (cursorPosition == 7) {
     newDataLine1 = "CH-8 : " + String(acVoltageA8.getVoltageRMS()) + " V";
     newDataLine2 = "CH-9 : " + String(acVoltageA9.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition == 8)
-  {
+  } else if (cursorPosition == 8) {
     newDataLine1 = "CH-9 : " + String(acVoltageA9.getVoltageRMS()) + " V";
     newDataLine2 = "CH-10 : " + String(acVoltageA10.getVoltageRMS()) + " V";
-  }
-  else if (cursorPosition < 0)
-  {
+  } else if (cursorPosition < 0) {
     cursorPosition = 8;
-  }
-  else
-  {
+  } else {
     // set cursorPosition = 0
     cursorPosition = 0;
   }
   // updateLCD
   updateLCD(newDataLine1, newDataLine2);
 }
-void updateDisplaySetting()
-{
-  if (currentMenu != 1)
-  {
+
+void updateDisplaySetting() {
+  if (currentMenu != 1) {
     return;
   }
 
-  if (currentSubMenu > 0)
-  {
+  if (currentSubMenu > 0) {
     return;
   }
   String newDataLine1 = "";
   String newDataLine2 = "";
-  // String deviceName;
-  // String ssid;
 
-  // String password;
-  // String mqtt_server;
-
-  // String mqtt_port;
-  // String mqtt_user;
-
-  // String mqtt_password;
-  // String mqtt_topic;
-
-  // String mqtt_topic_sub;
-  // String mqtt_topic_pub;
-
-  // String ip_address;
-  // String gateway;
-
-  // String subnet;
-  // String primaryDNS;
-
-  // String secondaryDNS;
-  // String time_update;
-
-  // String alarm_limit;
-  // BOOT LOADER
-
-  if (cursorPosition == 0)
-  {
+  if (cursorPosition == 0) {
     newDataLine1 = ">DEVICE NAME";
     newDataLine2 = " SSID";
-  }
-  else if (cursorPosition == 1)
-  {
+  } else if (cursorPosition == 1) {
     newDataLine1 = " DEVICE NAME";
     newDataLine2 = ">SSID";
-  }
-  else if (cursorPosition == 2)
-  {
+  } else if (cursorPosition == 2) {
     newDataLine1 = ">PASSWORD";
     newDataLine2 = " MQTT SERVER";
-  }
-  else if (cursorPosition == 3)
-  {
+  } else if (cursorPosition == 3) {
     newDataLine1 = " PASSWORD";
     newDataLine2 = ">MQTT SERVER";
-  }
-  else if (cursorPosition == 4)
-  {
+  } else if (cursorPosition == 4) {
     newDataLine1 = ">MQTT PORT";
     newDataLine2 = " MQTT USER";
-  }
-  else if (cursorPosition == 5)
-  {
+  } else if (cursorPosition == 5) {
     newDataLine1 = " MQTT PORT";
     newDataLine2 = ">MQTT USER";
-  }
-  else if (cursorPosition == 6)
-  {
+  } else if (cursorPosition == 6) {
     newDataLine1 = ">MQTT PASSWORD";
     newDataLine2 = " MQTT TOPIC";
-  }
-  else if (cursorPosition == 7)
-  {
+  } else if (cursorPosition == 7) {
     newDataLine1 = " MQTT PASSWORD";
     newDataLine2 = ">MQTT TOPIC";
-  }
-  else if (cursorPosition == 8)
-  {
+  } else if (cursorPosition == 8) {
     newDataLine1 = ">MQTT TOPIC SUB";
     newDataLine2 = " MQTT TOPIC PUB";
-  }
-  else if (cursorPosition == 9)
-  {
+  } else if (cursorPosition == 9) {
     newDataLine1 = " MQTT TOPIC SUB";
     newDataLine2 = ">MQTT TOPIC PUB";
-  }
-  else if (cursorPosition == 10)
-  {
+  } else if (cursorPosition == 10) {
     newDataLine1 = ">IP ADDRESS";
     newDataLine2 = " GATEWAY";
-  }
-  else if (cursorPosition == 11)
-  {
+  } else if (cursorPosition == 11) {
     newDataLine1 = " IP ADDRESS";
     newDataLine2 = ">GATEWAY";
-  }
-  else if (cursorPosition == 12)
-  {
+  } else if (cursorPosition == 12) {
     newDataLine1 = ">SUBNET";
     newDataLine2 = " PRIMARY DNS";
-  }
-  else if (cursorPosition == 13)
-  {
+  } else if (cursorPosition == 13) {
     newDataLine1 = " SUBNET";
     newDataLine2 = ">PRIMARY DNS";
-  }
-  else if (cursorPosition == 14)
-  {
+  } else if (cursorPosition == 14) {
     newDataLine1 = ">SECONDARY DNS";
     newDataLine2 = " TIME SEND DATA";
-  }
-  else if (cursorPosition == 15)
-  {
+  } else if (cursorPosition == 15) {
     newDataLine1 = " SECONDARY DNS";
     newDataLine2 = ">TIME SEND DATA";
-  }
-  else if (cursorPosition == 16)
-  {
+  } else if (cursorPosition == 16) {
     newDataLine1 = ">ALARM LIMIT";
     newDataLine2 = " BOOT LOADER";
-  }
-  else if (cursorPosition == 17)
-  {
+  } else if (cursorPosition == 17) {
     newDataLine1 = " ALARM LIMIT";
     newDataLine2 = ">BOOT LOADER";
-  }
-  else if (cursorPosition < 0)
-  {
+  } else if (cursorPosition < 0) {
     cursorPosition = 17;
-  }
-  else
-  {
+  } else {
     cursorPosition = 0;
   }
 
@@ -1340,23 +1245,19 @@ void updateDisplaySetting()
   updateLCD(newDataLine1, newDataLine2);
 }
 
-void updateDisplaySubSetting()
-{
-  if (currentMenu != 1)
-  {
+void updateDisplaySubSetting() {
+  if (currentMenu != 1) {
     return;
   }
 
-  if (currentSubMenu == 0)
-  {
+  if (currentSubMenu == 0) {
     return;
   }
 
   String newDataLine1 = "";
   String newDataLine2 = "";
 
-  if (cursorPosition == 0 && currentSubMenu == 1)
-  {
+  if (cursorPosition == 0 && currentSubMenu == 1) {
     newDataLine1 = "DEVICE NAME :";
     String settingDeviceName = setting.deviceName;
     // Remove \r \n
@@ -1364,9 +1265,7 @@ void updateDisplaySubSetting()
     settingDeviceName.replace("\n", "");
 
     newDataLine2 = settingDeviceName;
-  }
-  else if (cursorPosition == 1 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 1 && currentSubMenu == 1) {
     newDataLine1 = "SSID :";
     String settingSSID = setting.ssid;
     // Remove \r \n
@@ -1374,9 +1273,7 @@ void updateDisplaySubSetting()
     settingSSID.replace("\n", "");
 
     newDataLine2 = settingSSID;
-  }
-  else if (cursorPosition == 2 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 2 && currentSubMenu == 1) {
     newDataLine1 = "PASSWORD :";
     String settingPassword = setting.password;
     // Remove \r \n
@@ -1384,9 +1281,7 @@ void updateDisplaySubSetting()
     settingPassword.replace("\n", "");
 
     newDataLine2 = settingPassword;
-  }
-  else if (cursorPosition == 3 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 3 && currentSubMenu == 1) {
     newDataLine1 = "MQTT SERVER :";
     String settingMqttServer = setting.mqtt_server;
     // Remove \r \n
@@ -1394,9 +1289,7 @@ void updateDisplaySubSetting()
     settingMqttServer.replace("\n", "");
 
     newDataLine2 = settingMqttServer;
-  }
-  else if (cursorPosition == 4 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 4 && currentSubMenu == 1) {
     newDataLine1 = "MQTT PORT :";
     String settingMqttPort = setting.mqtt_port;
     // Remove \r \n
@@ -1404,9 +1297,7 @@ void updateDisplaySubSetting()
     settingMqttPort.replace("\n", "");
 
     newDataLine2 = settingMqttPort;
-  }
-  else if (cursorPosition == 5 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 5 && currentSubMenu == 1) {
     newDataLine1 = "MQTT USER :";
     String settingMqttUser = setting.mqtt_user;
     // Remove \r \n
@@ -1414,9 +1305,7 @@ void updateDisplaySubSetting()
     settingMqttUser.replace("\n", "");
 
     newDataLine2 = settingMqttUser;
-  }
-  else if (cursorPosition == 6 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 6 && currentSubMenu == 1) {
     newDataLine1 = "MQTT PASSWORD :";
     String settingMqttPassword = setting.mqtt_password;
     // Remove \r \n
@@ -1424,9 +1313,7 @@ void updateDisplaySubSetting()
     settingMqttPassword.replace("\n", "");
 
     newDataLine2 = settingMqttPassword;
-  }
-  else if (cursorPosition == 7 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 7 && currentSubMenu == 1) {
     newDataLine1 = "MQTT TOPIC :";
     String settingMqttTopic = setting.mqtt_topic;
     // Remove \r \n
@@ -1434,9 +1321,7 @@ void updateDisplaySubSetting()
     settingMqttTopic.replace("\n", "");
 
     newDataLine2 = settingMqttTopic;
-  }
-  else if (cursorPosition == 8 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 8 && currentSubMenu == 1) {
     newDataLine1 = "MQTT TOPIC SUB :";
     String settingMqttTopicSub = setting.mqtt_topic_sub;
     // Remove \r \n
@@ -1444,9 +1329,7 @@ void updateDisplaySubSetting()
     settingMqttTopicSub.replace("\n", "");
 
     newDataLine2 = settingMqttTopicSub;
-  }
-  else if (cursorPosition == 9 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 9 && currentSubMenu == 1) {
     newDataLine1 = "MQTT TOPIC PUB :";
     String settingMqttTopicPub = setting.mqtt_topic_pub;
     // Remove \r \n
@@ -1454,9 +1337,7 @@ void updateDisplaySubSetting()
     settingMqttTopicPub.replace("\n", "");
 
     newDataLine2 = settingMqttTopicPub;
-  }
-  else if (cursorPosition == 10 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 10 && currentSubMenu == 1) {
     newDataLine1 = "IP ADDRESS :";
     String settingIpAddress = setting.ip_address;
     // Remove \r \n
@@ -1464,9 +1345,7 @@ void updateDisplaySubSetting()
     settingIpAddress.replace("\n", "");
 
     newDataLine2 = settingIpAddress;
-  }
-  else if (cursorPosition == 11 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 11 && currentSubMenu == 1) {
     newDataLine1 = "GATEWAY :";
     String settingGateway = setting.gateway;
     // Remove \r \n
@@ -1474,9 +1353,7 @@ void updateDisplaySubSetting()
     settingGateway.replace("\n", "");
 
     newDataLine2 = settingGateway;
-  }
-  else if (cursorPosition == 12 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 12 && currentSubMenu == 1) {
     newDataLine1 = "SUBNET :";
     String settingSubnet = setting.subnet;
     // Remove \r \n
@@ -1484,9 +1361,7 @@ void updateDisplaySubSetting()
     settingSubnet.replace("\n", "");
 
     newDataLine2 = settingSubnet;
-  }
-  else if (cursorPosition == 13 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 13 && currentSubMenu == 1) {
     newDataLine1 = "PRIMARY DNS :";
     String settingPrimaryDNS = setting.primaryDNS;
     // Remove \r \n
@@ -1494,9 +1369,7 @@ void updateDisplaySubSetting()
     settingPrimaryDNS.replace("\n", "");
 
     newDataLine2 = settingPrimaryDNS;
-  }
-  else if (cursorPosition == 14 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 14 && currentSubMenu == 1) {
     newDataLine1 = "SECONDARY DNS :";
     String settingSecondaryDNS = setting.secondaryDNS;
     // Remove \r \n
@@ -1504,45 +1377,32 @@ void updateDisplaySubSetting()
     settingSecondaryDNS.replace("\n", "");
 
     newDataLine2 = settingSecondaryDNS;
-  }
-  else if (cursorPosition == 15 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 15 && currentSubMenu == 1) {
     newDataLine1 = "TIME SEND DATA :";
-    String settingTimeUpdate = setting.time_update;
+    String settingTimeUpdate = setting.interval;
     // Remove \r \n
     settingTimeUpdate.replace("\r", "");
     settingTimeUpdate.replace("\n", "");
 
     newDataLine2 = settingTimeUpdate;
-  }
-  else if (cursorPosition == 16 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 16 && currentSubMenu == 1) {
     newDataLine1 = "ALARM LIMIT :";
     String settingAlarmLimit = setting.alarm_limit;
     // Remove \r \n
     settingAlarmLimit.replace("\r", "");
     settingAlarmLimit.replace("\n", "");
     newDataLine2 = settingAlarmLimit;
-  }
-  else if (cursorPosition == 17 && currentSubMenu == 1)
-  {
+  } else if (cursorPosition == 17 && currentSubMenu == 1) {
     newDataLine1 = "BOOT LOADER :";
     newDataLine2 = "NO";
-  }
-  else if (cursorPosition == 17 && currentSubMenu == 2)
-  {
+  } else if (cursorPosition == 17 && currentSubMenu == 2) {
     newDataLine1 = "BOOT LOADER :";
     newDataLine2 = "YES";
-  }
-  else if (cursorPosition < 0)
-  {
+  } else if (cursorPosition < 0) {
     cursorPosition = 11;
-  }
-  else
-  {
+  } else {
     cursorPosition = 0;
   }
-
   // updateLCD
   updateLCD(newDataLine1, newDataLine2);
 }

@@ -38,7 +38,7 @@ void Setting::writeToSD() {
     dataFile.println("subnet=" + subnet);
     dataFile.println("primaryDNS=" + primaryDNS);
     dataFile.println("secondaryDNS=" + secondaryDNS);
-    dataFile.println("time_update=" + time_update);
+    dataFile.println("interval=" + interval);
     dataFile.println("alarm_limit=" + alarm_limit);
     dataFile.close();
   } else {
@@ -82,8 +82,8 @@ void Setting::assignValue(String key, String value){
     primaryDNS = value;
   } else if (key == "secondaryDNS") {
     secondaryDNS = value;
-  } else if (key == "time_update") {
-    time_update = value;
+  } else if (key == "interval") {
+    interval = value;
   } else if (key == "alarm_limit") {
     alarm_limit = value;
   }
