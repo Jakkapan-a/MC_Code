@@ -199,14 +199,6 @@ void loop()
       if (currentMillis - lastPublishMillis > 5000)
       {
         lastPublishMillis = currentMillis;
-        // countTest++;
-        // String mess = "hello ESP8266 + "+String(countTest);
-        // client.publish(setting.mqtt_topic_pub.c_str(), mess.c_str());
-        // Serial.println("Publish : T-"+setting.mqtt_topic_pub +" M-"+mess  +" U-"+setting.mqtt_user + +" P-"+setting.mqtt_password);
-        // if(countTest>10000){
-        //   countTest = 0;
-        // }
-        // publishVoltage();
       }
       else if (currentMillis < lastPublishMillis)
       {
