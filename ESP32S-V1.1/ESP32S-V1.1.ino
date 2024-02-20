@@ -1,12 +1,11 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include "Setting.h"
-#include <ArduinoJson.h>
 
 // Update these with values suitable for your network.
 const char *ssid = "Internet";
 const char *password = "0987654321qw";
-const char *mqtt_server = "broker_ip_address";
+const char *mqtt_server = "192.168.137.58";
 
 // Set your static IP address
 IPAddress local_IP(192, 168, 1, 184); // your static ip
@@ -153,7 +152,7 @@ void reconnect()
     Serial.print("Attempting MQTT connection...");
     String clientId = setting.deviceName;
     // clientId += String(random(0xffff), HEX);
-    String topic = setting.deviceName + "/online";
+    String topic = setting.mqtt_topic_pub + "/status";
     // Attempt to connect
     if (client.connect(clientId.c_str(), setting.mqtt_user.c_str(), setting.mqtt_password.c_str(), topic.c_str(), 0, true, "offline"))
     {
@@ -209,30 +208,6 @@ void loop()
   handleBufferedData();
 }
 
-void publishVoltage()
-{
-  const size_t capacity = JSON_ARRAY_SIZE(10) + 10 * JSON_OBJECT_SIZE(2);
-  Serial.print("Capacity ");
-  Serial.println(capacity);
-  DynamicJsonDocument doc(capacity);
-  for (int i = 1; i <= 10; i++)
-  {
-    JsonObject obj = doc.createNestedObject();
-    obj["CH" + String(i)] = random(1, 11); // Now i will go up to 10
-  }
-
-  String payload;
-  serializeJson(doc, payload);
-
-  if (client.publish(setting.mqtt_topic_pub.c_str(), payload.c_str()))
-  {
-    Serial.println("Publish : T-" + setting.mqtt_topic_pub + " M-" + payload);
-  }
-  else
-  {
-    Serial.println("Publish failed");
-  }
-}
 // ------------------  FUNCTIONS SERIAL  ------------------ //
 void handleBufferedData()
 {
@@ -266,6 +241,7 @@ void UpdateData()
   {
     return;
   }
+  
   if (_buffer[2] != 0x54)
   {
     return;
@@ -278,14 +254,16 @@ void UpdateData()
     data += (char)_buffer[i];
   }
 
-  Serial.println("Data : " + data);
+  // Serial.println("Data : " + data);
 
   if (WiFi.status() != WL_CONNECTED)
   {
+    Serial.println("Wifi not connected");
     return;
   }
   if (!client.connected())
   {
+    Serial.println("MQTT not connected");
     return;
   }
   
@@ -309,23 +287,24 @@ void UpdateData()
       index++;
     }
   }
-  // Publish data
-  const size_t capacity = JSON_ARRAY_SIZE(10) + 10 * JSON_OBJECT_SIZE(2);
-  Serial.print("Capacity ");
-  Serial.println(capacity);
-  DynamicJsonDocument doc(capacity);
+  
+  String payload;
+  // Publish data {1,2,3,4,5,6,7,8,9,10}
+  payload = "[";
   for (int i = 1; i <= 10; i++)
   {
-    JsonObject obj = doc.createNestedObject();
-    obj["CH" + String(i)] = decodeData[i - 1]; // Now i will go up to 10
-  }
+    payload += decodeData[i - 1];
+    if (i != 10)
+    {
+      payload += ",";
+    }
+   }
 
-  String payload;
-  serializeJson(doc, payload);
-
-  if (client.publish(setting.mqtt_topic_pub.c_str(), payload.c_str()))
+  payload += "]";
+  String topic = setting.mqtt_topic_pub + "/data";
+  if (client.publish(topic.c_str(), payload.c_str()))
   {
-    Serial.println("M Publish : T-" + setting.mqtt_topic_pub + " M-" + payload);
+    Serial.println("M Publish : T-" + topic +"  M-" + payload);
   }
   else
   {
