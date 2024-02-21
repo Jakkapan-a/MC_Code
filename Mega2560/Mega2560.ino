@@ -109,7 +109,7 @@ const int numRelays = sizeof(RELAYS) / sizeof(RELAYS[0]);
 // ------------------ VARIABLES ------------------ //
 uint32_t previousMillis = 0;
 
-int CountNoBacklight = 0;
+int countNoBacklight = 0;
 const int NoBacklightTime = 60;  // 60 seconds
 int countBackHome = 0;
 const int countBackHomeTime = 120;  // 60 seconds
@@ -239,10 +239,9 @@ void setup() {
   lcd.backlight();
 
   lcd.clear();
-  CountNoBacklight = NoBacklightTime;
+  countNoBacklight = NoBacklightTime;
   // checkSDCard();
   manageRelayByIndex(0);
-  
   // Read data from EEPROM
   limitAlarm = readInt8InEEPROM(LIMIT_ADDRESS_EEPROM);
   timeUpdateCH = readInt8InEEPROM(TIME_UPDATE_CH_EEPROM);
@@ -429,6 +428,13 @@ void mainFunction(void) {
       }
     }
 
+    // ---- Backlight ---- //
+    if(countNoBacklight >0 ){
+      countNoBacklight--;
+      if(countNoBacklight == 0){
+        lcd.noBacklight();
+      }
+    }
   } else if (currentMillis < previousMillisSec) {
     previousMillisSec = currentMillis;  // Over flow
   }
@@ -534,6 +540,8 @@ void OnEventPress_ESC(bool state) {
     Serial.println("ESC");
     // tone(BUZZER_PIN, 2000, 100);
     previousMillis = millis();
+    countNoBacklight = NoBacklightTime;
+    lcd.backlight();
   }
 }
 
@@ -544,6 +552,8 @@ void OnEventPress_UP(bool state) {
     Serial.println("UP");
     // tone(BUZZER_PIN, 2000, 100);
     previousMillis = millis();
+    countNoBacklight = NoBacklightTime;
+    lcd.backlight();
   }
 }
 
@@ -554,6 +564,8 @@ void OnEventPress_DOWN(bool state) {
     Serial.println("DOWN");
     // tone(BUZZER_PIN, 2000, 100);
     previousMillis = millis();
+    countNoBacklight = NoBacklightTime;
+    lcd.backlight();
   }
 }
 
@@ -564,6 +576,8 @@ void OnEventPress_ENTER(bool state) {
     Serial.println("ENTER");
     // tone(BUZZER_PIN, 2000, 100);
     previousMillis = millis();
+    countNoBacklight = NoBacklightTime;
+    lcd.backlight();
   }
 }
 
