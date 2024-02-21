@@ -67,6 +67,7 @@ TcPINOUT LED9(LED9_PIN);
 #define LED10_PIN 31
 TcPINOUT LED10(LED10_PIN);
 
+TcPINOUT LED_LIST[] = {LED1, LED2, LED3, LED4, LED5, LED6, LED7, LED8, LED9, LED10};
 // ---------------------------- //
 
 #define RELAY1_PIN 32
@@ -139,20 +140,25 @@ boolean currentStateDown = false;
 boolean currentStateEnter = false;
 boolean stateCensorOnStation = false;
 
+boolean statusServer = false;
+boolean statusETH = false;
+uint8_t countDownStatusServer = 0;  // Sec 13
+
+#define TIME_UP_COMMUNICATION 10  // 14 seconds
+uint8_t countDownStatusETH = 0;     // Sec 12
+
+#define TIME_OUT_COMMUNICATION 20  // 20 seconds
+uint8_t countUpCommunication = 0;
+
 // -------------------- END STATE BUTTON -------------------- //
 bool isAlarm[10] = { false, false, false, false, false, false, false, false, false, false };
-
 #define LIMIT_ADDRESS_EEPROM 10
 int limitAlarm,setLimitAlarm = 6;
-
 #define TIME_UPDATE_CH_EEPROM 15
 int timeUpdateCH, setTimeUpdateCH = 5; // CH is Channel relay update
-
 #define TIME_UPDATE_DATA_EEPROM 20
 int timeUpdateData, setTimeUpdateData = 5;
-
-
-
+// ------------------   VARIABLES   ------------------ //
 int countUpdateParameter = 0;
 unsigned long previousMillisUpdateParameter = 0;
 const int timeUpdateParameter = 20;  // 20ms
@@ -201,7 +207,7 @@ void serialEvent3() {
     if (inChar == startChar3) {
       startReceived3 = true;
       inputStringLength3 = 0;
-      memset(inputString3, 0, sizeof(inputString3));
+      memset(inputString3, 0, BUFFER_SIZE_DATA);
     } else if (startReceived3 && inChar == endChar3) {
       endReceived3 = true;
     } else if (startReceived3) {
@@ -235,18 +241,16 @@ void setup() {
   lcd.clear();
   CountNoBacklight = NoBacklightTime;
   // checkSDCard();
-  // RESET.on();
-  // status = 5;
   manageRelayByIndex(0);
   
   // Read data from EEPROM
   limitAlarm = readInt8InEEPROM(LIMIT_ADDRESS_EEPROM);
   timeUpdateCH = readInt8InEEPROM(TIME_UPDATE_CH_EEPROM);
-  timeUpdateData = readInt8InEEPROM(TIME_UPDATE_DATA_EEPROM); 
+  // timeUpdateData = readInt8InEEPROM(TIME_UPDATE_DATA_EEPROM); 
 
   Serial.println("Limit Alarm: " + String(limitAlarm));
   Serial.println("Time Update CH: " + String(timeUpdateCH));
-  Serial.println("Time Update Data: " + String(timeUpdateData));
+  // Serial.println("Time Update Data: " + String(timeUpdateData));
 
 }
 // ------------------   LOOP   ------------------ //
@@ -257,7 +261,92 @@ void loop() {
   BTN_ENTER.update();
   acVoltageA1.update();
   mainFunction();
+  manageSerial();
+  manageSerial3();
 }
+
+void manageSerial()
+{
+  if (startReceived && endReceived) {
+    startReceived = false;
+    endReceived = false;
+    inputString[inputStringLength] = '\0';
+    Serial.println(inputString);
+    parseData(inputString);
+    // inputString = "";
+    memset(inputString, 0, BUFFER_SIZE_DATA);
+    inputStringLength=0;
+  }
+}
+
+void manageSerial3()
+{
+  if (startReceived3 && endReceived3) {
+    startReceived3 = false;
+    endReceived3 = false;
+    inputString3[inputStringLength3] = '\0';
+    Serial.println(inputString3);
+    parseData(inputString3);
+    // inputString3 = "";
+    memset(inputString3, 0, BUFFER_SIZE_DATA);
+    inputStringLength3=0;
+  }
+}
+
+
+void parseData(String data) {
+  data.trim();
+ if (data.indexOf("STATUS_SERVER:") != -1) {
+    // Send data to MES
+    String extract = extractData(data, "STATUS_SERVER:");
+    if(extract == "OK"){
+      statusServer = true;
+      countDownStatusServer = TIME_OUT_COMMUNICATION;
+    }else{
+      statusServer = false;
+    }
+    // Response to master
+  } else if (data.indexOf("STATUS_ETH:") != -1) {
+    // Send data to MES
+    // countDownStatusETH = TIME_OUT_COMMUNICATION;
+     String extract = extractData(data, "STATUS_ETH:");
+    if(extract == "OK"){  
+      statusETH = true;
+      countDownStatusETH = TIME_OUT_COMMUNICATION;
+    }else{
+      statusETH = false;
+    }
+    // Response to master
+  }else if (data.indexOf("UPDATE_LIMIT:") != -1) {
+    // Send data to MES
+    // countDownStatusETH = TIME_OUT_COMMUNICATION;
+     String extract = extractData(data, "UPDATE_LIMIT:");
+    // convert to int
+    int limit = extract.toInt();
+    if(limit > 0 && limit < 250){
+      limitAlarm = limit;
+      updateEEPROM(LIMIT_ADDRESS_EEPROM, limitAlarm);
+    }
+    // Response to master
+  }
+}
+
+String extractData(String data, String key) {
+  int keyIndex = data.indexOf(key);  // Find the position of the key
+  if (keyIndex == -1) {
+    return "";  // Return 0 if key not found
+  }
+
+  int startIndex = keyIndex + key.length();      // Start index for the number
+  int endIndex = data.indexOf(",", startIndex);  // Find the next comma after the key
+  if (endIndex == -1) {
+    endIndex = data.length();  // If no comma, assume end of string
+  }
+
+  String valueStr = data.substring(startIndex, endIndex);  // Extract the substring
+  return valueStr;                                         // Convert to float and return
+}
+
 
 void manageRelayByIndex(int _index) {
   for (int i = 0; i < 10; i++) {
@@ -278,6 +367,73 @@ uint32_t previousMillisSec = 0;
 uint8_t nextTimeRelaySec =0;
 void mainFunction(void) {
   unsigned long currentMillis = millis();
+  
+  if (currentMillis - previousMillisSec >= 1000)  // 1 seconds
+  {
+    previousMillisSec = currentMillis;
+    // Next Relay after 5 seconds change CH relay
+    nextTimeRelaySec++;
+    if(nextTimeRelaySec >= 2){
+      // Send data to Serial3 PUB MQTT
+      String data = "$PUB=";
+      data += "CH";
+      data += String(indexRelay + 1);
+      data += ":"+String(chData[indexRelay], 0);
+      data += "#";   
+      Serial.println(data);   
+      Serial3.println(data); 
+    }
+
+    if(nextTimeRelaySec > timeUpdateCH)
+    {
+      indexRelay++;
+      if (indexRelay >= INDEX_RELAY_MAX) {
+        indexRelay = 0;
+      }
+      manageRelayByIndex(indexRelay);
+      nextTimeRelaySec = 0;
+      previousMillis = currentMillis;
+    }
+
+    countUpCommunication++;
+    if(countUpCommunication > TIME_UP_COMMUNICATION)
+    {
+      countUpCommunication = 0;
+    }else if (countUpCommunication == 2) {
+      Serial.println("Call status ETH");
+      Serial3.println("$STATUS_ETH:ASK#");
+    } else if (countUpCommunication == 3) {
+      Serial.println("Call status SERVER");
+      Serial3.println("$STATUS_SERVER:ASK#");
+    }
+    // ---- Server ---- //
+    if(countDownStatusServer > 0)
+    {
+      countDownStatusServer--;
+      if(countDownStatusServer == 0)
+      {
+        statusServer = false;
+      }else{
+        statusServer = true;
+      }
+    }
+    // ---- ETH ---- //
+    if(countDownStatusETH > 0)
+    {
+      countDownStatusETH--;
+      if(countDownStatusETH == 0)
+      {
+        statusETH = false;
+      }else{
+        statusETH = true;
+      }
+    }
+
+  } else if (currentMillis < previousMillisSec) {
+    previousMillisSec = currentMillis;  // Over flow
+  }
+
+  // -------------------------- 100 ms -------------------------- //
   if (currentMillis - previousMillis >= 100)  // 200 ms
   {
     previousMillis = currentMillis;
@@ -291,7 +447,17 @@ void mainFunction(void) {
     // Serial.print(voltage,5);
     // Serial.println("V");
     chData[indexRelay] = voltage;
-
+    if(nextTimeRelaySec >= 2)
+    {
+      if(chData[indexRelay] > limitAlarm){
+        isAlarm[indexRelay] = true;
+        LED_LIST[indexRelay].on();
+      }else{
+        isAlarm[indexRelay] = false;
+        LED_LIST[indexRelay].off();
+      }
+    }
+    
     if (indexMenu == 0) {
       String data = "CH";
       data += indexRelay + 1;
@@ -299,7 +465,7 @@ void mainFunction(void) {
       data += String(voltage, 0);
       data += "V";
       // updateLCD("Measurement", data);
-      updateLCD("MEASUREMENT", data);
+      updateLCD(">-MEASUREMENT-<", data);
 
     } else {
       // Display setting
@@ -311,25 +477,7 @@ void mainFunction(void) {
   } else if (currentMillis < previousMillis) {
     previousMillis = currentMillis;  // Over flow
   }
-  if (currentMillis - previousMillisSec >= 1000)  // 1 seconds
-  {
-    previousMillisSec = currentMillis;
-
-    // Next Relay after 5 seconds
-    nextTimeRelaySec++;
-    if(nextTimeRelaySec > 5){
-      indexRelay++;
-      if (indexRelay >= INDEX_RELAY_MAX) {
-        indexRelay = 0;
-      }
-      manageRelayByIndex(indexRelay);
-      nextTimeRelaySec = 0;
-      previousMillis = currentMillis;
-    }
-
-  } else if (currentMillis < previousMillisSec) {
-    previousMillisSec = currentMillis;  // Over flow
-  }
+  
 }
 
 
@@ -512,11 +660,6 @@ void btnUpOnEventPressed() {
       setTimeUpdateCH++;
     }
 
-    // SELECT MENU UPDATE DATA
-    else if (selectMenu == 3 && selectSubMenu > 0) {
-      setTimeUpdateData++;
-    }
-  
     else if(selectSubMenu == 0){
       selectMenu--;
     }
@@ -540,11 +683,6 @@ void btnDownOnEventPressed() {
       setTimeUpdateCH--;
     }
 
-    // SELECT MENU UPDATE DATA
-    else if (selectMenu == 3 && selectSubMenu > 0) {
-      setTimeUpdateData--;
-    }
-    
     else if(selectSubMenu == 0){
       selectMenu++;
     }
@@ -595,26 +733,9 @@ void btnEnterOnEventPressed() {
       delay(1000);
       // Update
       timeUpdateCH = setTimeUpdateCH;
-      
       selectSubMenu = 0;
     }
-  // SELECT MENU UPDATE DATA
-  else if (selectMenu == 3 && selectSubMenu == 0) {
-    selectSubMenu = 1;
-    // Read data from EEPROM
-    timeUpdateData = readInt8InEEPROM(TIME_UPDATE_DATA_EEPROM);
-    setTimeUpdateData = timeUpdateData;
-  }else if (selectMenu == 3 && selectSubMenu > 0) {
-    
-      // Save data to EEPROM
-      updateEEPROM(TIME_UPDATE_DATA_EEPROM, setTimeUpdateData);
-      updateLCD("Save...........","");
-      delay(1000);
-      // Update
-      timeUpdateData = setTimeUpdateData;
 
-      selectSubMenu = 0;
-    }
 }
 
 void btnUpDownOnEventPressed() {
@@ -645,7 +766,7 @@ void settingPage() {
   }else 
   if (selectMenu == 2) {
     line1 = ">UPDATE CH";
-    line2 = " UPDATE DATA";
+    line2 = " SERVER : " + String(statusServer ? "ONLINE" : "OFFLINE");
 
     if (selectSubMenu > 0) 
     {
@@ -653,18 +774,21 @@ void settingPage() {
     }
   }else if (selectMenu == 3) {
     line1 = " UPDATE CH";
-    line2 = ">UPDATE DATA";
-
+    //line2 = ">UPDATE DATA";
+    line2 = ">SERVER : " + String(statusServer ? "ONLINE" : "OFFLINE");
     if (selectSubMenu > 0) 
     {
       showSettingUpdateData(setTimeUpdateData, line1, line2);
     }
+  }else if (selectMenu == 4) {
+    line1 = ">ETH : " + String(statusETH ? "TRUE" : "FALSE");
+    line2 = " ";
   }
-  
-  else if(selectMenu > 3){
+
+  else if(selectMenu > 4){
     selectMenu = 0;
   }else if(selectMenu < 0){
-    selectMenu = 3;
+    selectMenu = 4;
   }
   updateLCD(line1, line2);
 }
@@ -688,11 +812,11 @@ void showSettingLimit(int &myLimit, String &line1, String &line2) {
     return;
   }
 
- if (myLimit < 0) {
+ if (myLimit < 1) {
     myLimit = 250;
   }else
   if (myLimit > 250) {
-    myLimit = 0;
+    myLimit = 1;
   } 
 
   line1 = " LIMIT: " + String(limitAlarm);
@@ -703,13 +827,12 @@ void showSettingUpdateCH(int &myTime, String &line1, String &line2) {
   if (selectSubMenu == 0) {
     return;
   }
- if (myTime < 3) {
+ if (myTime < 2) {
     myTime = 60;
   }else
   if (myTime > 60) {
-    myTime = 3;
+    myTime = 2;
   } 
-
   line1 = " UPDATE CH: " + String(timeUpdateCH);
   line2 = ">SET : " + String(myTime) + "s";
 }
