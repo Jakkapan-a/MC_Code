@@ -1,3 +1,14 @@
+/**
+ * @file Mega2560.ino
+ * @author Jakkapan.A
+ * @brief 
+ * @version 0.1
+ * @date 2024-03-14
+ * Arduino Mega 2560
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include <TcBUTTON.h>
 #include <TcPINOUT.h>
 #include <LiquidCrystal_I2C.h>
@@ -37,37 +48,70 @@ TcBUTTON BTN_ENTER(BTN_ENTER_PIN, false);
 AcVoltage acVoltageA1(AC_VOLTAGE1_PIN);
 
 // ------------------  OUTPUT   ------------------ //
-#define LED1_PIN 22
-TcPINOUT LED1(LED1_PIN);
+#define LED1_RED_PIN 22
+TcPINOUT LED1(LED1_RED_PIN);
 
-#define LED2_PIN 23
-TcPINOUT LED2(LED2_PIN);
+#define LED2_RED_PIN 23
+TcPINOUT LED2(LED2_RED_PIN);
 
-#define LED3_PIN 24
-TcPINOUT LED3(LED3_PIN);
+#define LED3_RED_PIN 24
+TcPINOUT LED3(LED3_RED_PIN);
 
-#define LED4_PIN 25
-TcPINOUT LED4(LED4_PIN);
+#define LED4_RED_PIN 25
+TcPINOUT LED4(LED4_RED_PIN);
 
-#define LED5_PIN 26
-TcPINOUT LED5(LED5_PIN);
+#define LED5_RED_PIN 26
+TcPINOUT LED5(LED5_RED_PIN);
 
-#define LED6_PIN 27
-TcPINOUT LED6(LED6_PIN);
+#define LED6_RED_PIN 27
+TcPINOUT LED6(LED6_RED_PIN);
 
-#define LED7_PIN 28
-TcPINOUT LED7(LED7_PIN);
+#define LED7_RED_PIN 28
+TcPINOUT LED7(LED7_RED_PIN);
 
-#define LED8_PIN 29
-TcPINOUT LED8(LED8_PIN);
+#define LED8_RED_PIN 29
+TcPINOUT LED8(LED8_RED_PIN);
 
-#define LED9_PIN 30
-TcPINOUT LED9(LED9_PIN);
+#define LED9_RED_PIN 30
+TcPINOUT LED9(LED9_RED_PIN);
 
-#define LED10_PIN 31
-TcPINOUT LED10(LED10_PIN);
+#define LED10_RED_PIN 31
+TcPINOUT LED10(LED10_RED_PIN);
 
-TcPINOUT LED_LIST[] = {LED1, LED2, LED3, LED4, LED5, LED6, LED7, LED8, LED9, LED10};
+TcPINOUT LED_LIST_RED[] = {LED1, LED2, LED3, LED4, LED5, LED6, LED7, LED8, LED9, LED10};
+
+// ------------------  LED GREEN ------------------- //
+#define LED1_GREEN_PIN  11
+TcPINOUT LED1_GREEN(LED1_GREEN_PIN);
+
+#define LED2_GREEN_PIN  12
+TcPINOUT LED2_GREEN(LED2_GREEN_PIN);
+
+#define LED3_GREEN_PIN  A8
+TcPINOUT LED3_GREEN(LED3_GREEN_PIN);
+
+#define LED4_GREEN_PIN  A9
+TcPINOUT LED4_GREEN(LED4_GREEN_PIN);
+
+#define LED5_GREEN_PIN  A10
+TcPINOUT LED5_GREEN(LED5_GREEN_PIN);
+
+#define LED6_GREEN_PIN  A11
+TcPINOUT LED6_GREEN(LED6_GREEN_PIN);
+
+#define LED7_GREEN_PIN  A12
+TcPINOUT LED7_GREEN(LED7_GREEN_PIN);
+
+#define LED8_GREEN_PIN  A13
+TcPINOUT LED8_GREEN(LED8_GREEN_PIN);
+
+#define LED9_GREEN_PIN  A14
+TcPINOUT LED9_GREEN(LED9_GREEN_PIN);
+
+#define LED10_GREEN_PIN  A15
+TcPINOUT LED10_GREEN(LED10_GREEN_PIN);
+
+TcPINOUT LED_LIST_GREEN[] = {LED1_GREEN, LED2_GREEN, LED3_GREEN, LED4_GREEN, LED5_GREEN, LED6_GREEN, LED7_GREEN, LED8_GREEN, LED9_GREEN, LED10_GREEN};
 // ---------------------------- //
 
 #define RELAY1_PIN 32
@@ -141,6 +185,8 @@ boolean currentStateEnter = false;
 boolean stateCensorOnStation = false;
 
 boolean statusServer = false;
+boolean oldStateServer = false;
+
 boolean statusETH = false;
 uint8_t countDownStatusServer = 0;  // Sec 13
 
@@ -170,6 +216,8 @@ boolean endReceived = false;
 
 const char startChar = '$';
 const char endChar = '#';
+
+char fileName[8];
 // String inputString = "";
 char inputString[BUFFER_SIZE_DATA];
 int inputStringLength = 0;
@@ -240,7 +288,7 @@ void setup() {
 
   lcd.clear();
   countNoBacklight = NoBacklightTime;
-  // checkSDCard();
+  checkSDCard();
   manageRelayByIndex(0);
   // Read data from EEPROM
   limitAlarm = readInt8InEEPROM(LIMIT_ADDRESS_EEPROM);
@@ -250,7 +298,11 @@ void setup() {
   Serial.println("Limit Alarm: " + String(limitAlarm));
   Serial.println("Time Update CH: " + String(timeUpdateCH));
   // Serial.println("Time Update Data: " + String(timeUpdateData));
-
+    int totalFile = countFiles("/");
+    Serial.println("Total file: " + String(totalFile));
+    String file_name = "T"+String(totalFile+1)+".csv";
+    // Set to base file name
+    strcpy(fileName, file_name.c_str());
 }
 // ------------------   LOOP   ------------------ //
 void loop() {
@@ -262,6 +314,16 @@ void loop() {
   mainFunction();
   manageSerial();
   manageSerial3();
+
+  if(oldStateServer != statusServer){
+    oldStateServer = statusServer;
+    // get total file in SD card
+    int totalFile = countFiles("/");
+    Serial.println("Total file: " + String(totalFile));
+    String file_name = "T"+String(totalFile+1)+".csv";
+    // Set to base file name
+    strcpy(fileName, file_name.c_str());
+  }
 }
 
 void manageSerial()
@@ -370,17 +432,27 @@ void mainFunction(void) {
   if (currentMillis - previousMillisSec >= 1000)  // 1 seconds
   {
     previousMillisSec = currentMillis;
+    checkSDCard();
     // Next Relay after 5 seconds change CH relay
     nextTimeRelaySec++;
     if(nextTimeRelaySec >= 2){
-      // Send data to Serial3 PUB MQTT
+      // Send data to Serial3 PUB MQTT or save to SD card if statusServer is false
+      
       String data = "$PUB=";
       data += "CH";
       data += String(indexRelay + 1);
       data += ":"+String(chData[indexRelay], 0);
       data += "#";   
       Serial.println(data);   
-      Serial3.println(data); 
+      if(statusServer == false){
+        data = "CH";
+        data += String(indexRelay + 1);
+        data += ",";
+        data += String(chData[indexRelay], 0);
+        appendFile(fileName, data.c_str());
+      }else{
+        Serial3.println(data); 
+      }
     }
 
     if(nextTimeRelaySec > timeUpdateCH)
@@ -457,10 +529,10 @@ void mainFunction(void) {
     {
       if(chData[indexRelay] > limitAlarm){
         isAlarm[indexRelay] = true;
-        LED_LIST[indexRelay].on();
+        LED_LIST_RED[indexRelay].on();
       }else{
         isAlarm[indexRelay] = false;
-        LED_LIST[indexRelay].off();
+        LED_LIST_RED[indexRelay].off();
       }
     }
     
@@ -500,6 +572,8 @@ void checkSDCard() {
         dot = ".";
       }
       delay(300);
+       countNoBacklight = NoBacklightTime;
+      lcd.backlight();
     }
   }
 }
@@ -894,4 +968,38 @@ uint16_t readInt16CInEEPROM(int index) {
   data = EEPROM.read(index) << 8;  // Read the higher byte and shift it
   data |= EEPROM.read(index + 1);  // Read the lower byte and OR it
   return data;
+}
+
+
+boolean appendFile(const char *filename, const char *message) {
+  // Open file for appending data
+  File file = SD.open(filename, FILE_WRITE);
+  if (file) {
+    file.println(message);
+    file.close();
+    return true;
+  } else {
+    Serial.println("Failed to open file for appending");
+    return false;
+  }
+}
+
+int countFiles(char *dirName) {
+  File dir = SD.open(dirName);
+  int fileCount = 0;
+  while (true) {
+    File entry = dir.openNextFile();
+    if (!entry) {
+      break;
+    }
+    if (entry.isDirectory()) {
+    } else {
+      fileCount++;
+    }
+    entry.close();
+  }
+  Serial.print("Number of files: ");
+  Serial.println(fileCount);
+  dir.close();
+  return fileCount;
 }
