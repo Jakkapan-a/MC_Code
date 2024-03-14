@@ -14,7 +14,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <AcVoltage.h>
 #include <SPI.h>
-#include <SD.h>
+// #include <SD.h>
 #include <Wire.h>
 #include <EEPROM.h>
 
@@ -144,8 +144,8 @@ TcPINOUT RELAY9(RELAY9_PIN);
 #define RELAY10_PIN 41
 TcPINOUT RELAY10(RELAY10_PIN);
 
-#define BUZZER_PIN 7
-TcPINOUT BUZZER(BUZZER_PIN);
+#define BUZZER_PIN 9
+TcPINOUT BUZZER(BUZZER_PIN,false);
 
 
 TcPINOUT RELAYS[] = { RELAY1, RELAY2, RELAY3, RELAY4, RELAY5, RELAY6, RELAY7, RELAY8, RELAY9, RELAY10 };
@@ -288,7 +288,7 @@ void setup() {
 
   lcd.clear();
   countNoBacklight = NoBacklightTime;
-  checkSDCard();
+  // checkSDCard();
   manageRelayByIndex(0);
   // Read data from EEPROM
   limitAlarm = readInt8InEEPROM(LIMIT_ADDRESS_EEPROM);
@@ -298,12 +298,29 @@ void setup() {
   Serial.println("Limit Alarm: " + String(limitAlarm));
   Serial.println("Time Update CH: " + String(timeUpdateCH));
   // Serial.println("Time Update Data: " + String(timeUpdateData));
-    int totalFile = countFiles("/");
-    Serial.println("Total file: " + String(totalFile));
-    String file_name = "T"+String(totalFile+1)+".csv";
-    // Set to base file name
-    strcpy(fileName, file_name.c_str());
-}
+    // int totalFile = countFiles("/");
+    // Serial.println("Total file: " + String(totalFile));
+    // String file_name = "T"+String(totalFile+1)+".csv";
+    // // Set to base file name
+    // strcpy(fileName, file_name.c_str());
+
+    // Loop off led 
+    for (int i = 0; i < 10; i++) {
+      LED_LIST_RED[i].off();
+      LED_LIST_GREEN[i].off();
+
+    
+    }
+
+      BUZZER.on();
+    delay(100);
+    BUZZER.off();
+    delay(50);
+    BUZZER.on();
+    delay(100);
+    BUZZER.off();
+    
+    }
 // ------------------   LOOP   ------------------ //
 void loop() {
   BTN_ESC.update();
@@ -318,11 +335,11 @@ void loop() {
   if(oldStateServer != statusServer){
     oldStateServer = statusServer;
     // get total file in SD card
-    int totalFile = countFiles("/");
-    Serial.println("Total file: " + String(totalFile));
-    String file_name = "T"+String(totalFile+1)+".csv";
-    // Set to base file name
-    strcpy(fileName, file_name.c_str());
+    // int totalFile = countFiles("/");
+    // Serial.println("Total file: " + String(totalFile));
+    // String file_name = "T"+String(totalFile+1)+".csv";
+    // // Set to base file name
+    // strcpy(fileName, file_name.c_str());
   }
 }
 
@@ -432,7 +449,7 @@ void mainFunction(void) {
   if (currentMillis - previousMillisSec >= 1000)  // 1 seconds
   {
     previousMillisSec = currentMillis;
-    checkSDCard();
+    // checkSDCard();
     // Next Relay after 5 seconds change CH relay
     nextTimeRelaySec++;
     if(nextTimeRelaySec >= 2){
@@ -449,7 +466,7 @@ void mainFunction(void) {
         data += String(indexRelay + 1);
         data += ",";
         data += String(chData[indexRelay], 0);
-        appendFile(fileName, data.c_str());
+        // appendFile(fileName, data.c_str());
       }else{
         Serial3.println(data); 
       }
@@ -516,7 +533,7 @@ void mainFunction(void) {
   {
     previousMillis = currentMillis;
     float voltage = acVoltageA1.getVoltageRMS();
-    voltage = voltage < 0.5 ? 0 : voltage;
+    voltage = voltage < 5 ? 0 : voltage;
     // ch = voltage;
     // Print to Serial
     // Serial.print("CH");
@@ -530,9 +547,32 @@ void mainFunction(void) {
       if(chData[indexRelay] > limitAlarm){
         isAlarm[indexRelay] = true;
         LED_LIST_RED[indexRelay].on();
+        LED_LIST_GREEN[indexRelay].off();
       }else{
         isAlarm[indexRelay] = false;
         LED_LIST_RED[indexRelay].off();
+        LED_LIST_GREEN[indexRelay].on();
+
+        // If not index led green off 
+        for (int i = 0; i < 10; i++) {
+          if(i != indexRelay){
+            LED_LIST_GREEN[i].off();
+          }
+        }        
+      }
+
+      bool isAlarmAll = false;
+      for (int i = 0; i < 10; i++) {
+        if(isAlarm[i] == true){
+          isAlarmAll = true;
+          break;
+        }
+      }
+
+      if(isAlarmAll){
+        BUZZER.on();
+      }else{
+        BUZZER.off();
       }
     }
     
@@ -560,23 +600,24 @@ void mainFunction(void) {
 
 
 
-void checkSDCard() {
-  // loop if SD card is not present
-  String dot = ".";
-  while (!SD.begin(SD_CS)) {
-    // Lcd print
-    for (int i = 0; i < 15; i++) {
-      updateLCD("Initial SD Card", dot.c_str());
-      dot += ".";
-      if (dot.length() > 15) {
-        dot = ".";
-      }
-      delay(300);
-       countNoBacklight = NoBacklightTime;
-      lcd.backlight();
-    }
-  }
-}
+// void checkSDCard() {
+//   // loop if SD card is not present
+//   String dot = ".";
+//   while (!SD.begin(SD_CS)) {
+//     // Lcd print
+//     for (int i = 0; i < 15; i++) {
+//       updateLCD("Initial SD Card", dot.c_str());
+//       dot += ".";
+//       if (dot.length() > 15) {
+//         dot = ".";
+//       }
+//       delay(300);
+//        countNoBacklight = NoBacklightTime;
+//       lcd.backlight();
+//     }
+//   }
+// }
+
 char currentLine1[17] = "                ";  // 16 characters + null terminator
 char currentLine2[17] = "                ";  // 16 characters + null terminator
 void updateLCD(const String newDataLine1, const String newDataLine2) {
@@ -971,35 +1012,35 @@ uint16_t readInt16CInEEPROM(int index) {
 }
 
 
-boolean appendFile(const char *filename, const char *message) {
-  // Open file for appending data
-  File file = SD.open(filename, FILE_WRITE);
-  if (file) {
-    file.println(message);
-    file.close();
-    return true;
-  } else {
-    Serial.println("Failed to open file for appending");
-    return false;
-  }
-}
+// boolean appendFile(const char *filename, const char *message) {
+//   // Open file for appending data
+//   File file = SD.open(filename, FILE_WRITE);
+//   if (file) {
+//     file.println(message);
+//     file.close();
+//     return true;
+//   } else {
+//     Serial.println("Failed to open file for appending");
+//     return false;
+//   }
+// }
 
-int countFiles(char *dirName) {
-  File dir = SD.open(dirName);
-  int fileCount = 0;
-  while (true) {
-    File entry = dir.openNextFile();
-    if (!entry) {
-      break;
-    }
-    if (entry.isDirectory()) {
-    } else {
-      fileCount++;
-    }
-    entry.close();
-  }
-  Serial.print("Number of files: ");
-  Serial.println(fileCount);
-  dir.close();
-  return fileCount;
-}
+// int countFiles(char *dirName) {
+//   File dir = SD.open(dirName);
+//   int fileCount = 0;
+//   while (true) {
+//     File entry = dir.openNextFile();
+//     if (!entry) {
+//       break;
+//     }
+//     if (entry.isDirectory()) {
+//     } else {
+//       fileCount++;
+//     }
+//     entry.close();
+//   }
+//   Serial.print("Number of files: ");
+//   Serial.println(fileCount);
+//   dir.close();
+//   return fileCount;
+// }
