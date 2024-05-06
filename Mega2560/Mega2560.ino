@@ -2,7 +2,7 @@
  * @file Mega2560.ino
  * @author Jakkapan.A
  * @brief
- * @version 0.1
+ * @version 0.2
  * @date 2024-03-14
  * Arduino Mega 2560
  *
@@ -24,137 +24,136 @@
 // ------------------   INPUT   ------------------ //
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Module IIC/I2C Interface
 
-const int led = 13;
+const int led_mod_bus = 8;
 ModbusMaster node;
-#define MbSlaveID 5
+#define MbSlaveID 5 // Slave ID of the Modbus device
 
-#define BTN_ESC_PIN 2
+#define BTN_ESC_PIN 34
 void OnEventPress_ESC(bool state);
 TcBUTTON BTN_ESC(BTN_ESC_PIN, false);
 
-#define BTN_UP_PIN 3
+#define BTN_UP_PIN 35
 void OnEventPress_UP(bool state);
 TcBUTTON BTN_UP(BTN_UP_PIN, false);
 
-#define BTN_DOWN_PIN 4
+#define BTN_DOWN_PIN 36
 void OnEventPress_DOWN(bool state);
 TcBUTTON BTN_DOWN(BTN_DOWN_PIN, false);
 
-#define BTN_ENTER_PIN 5
+#define BTN_ENTER_PIN 37
 void OnEventPress_ENTER(bool state);
 TcBUTTON BTN_ENTER(BTN_ENTER_PIN, false);
 
-#define SD_CS 53   // | Mega 2560
-#define SD_MOSI 51 // | COPI 51
-#define SD_MISO 50 // | CIPO 50
-#define SD_SCK 52  // |  CSK 52
-
-// ------------------  Analog INPUT   ------------------ //
-// #define AC_VOLTAGE1_PIN A1
-// AcVoltage acVoltageA1(AC_VOLTAGE1_PIN);
-
 // ------------------  OUTPUT   ------------------ //
-#define LED1_RED_PIN 22
-TcPINOUT LED1(LED1_RED_PIN);
+#define LED1_RED_PIN 38
+TcPINOUT LED1_RED(LED1_RED_PIN);
 
-#define LED2_RED_PIN 23
-TcPINOUT LED2(LED2_RED_PIN);
+#define LED2_RED_PIN 39
+TcPINOUT LED2_RED(LED2_RED_PIN);
 
-#define LED3_RED_PIN 24
-TcPINOUT LED3(LED3_RED_PIN);
+#define LED3_RED_PIN 40
+TcPINOUT LED3_RED(LED3_RED_PIN);
 
-#define LED4_RED_PIN 25
-TcPINOUT LED4(LED4_RED_PIN);
+#define LED4_RED_PIN 41
+TcPINOUT LED4_RED(LED4_RED_PIN);
 
-#define LED5_RED_PIN 26
-TcPINOUT LED5(LED5_RED_PIN);
+#define LED5_RED_PIN 42
+TcPINOUT LED5_RED(LED5_RED_PIN);
 
-#define LED6_RED_PIN 27
-TcPINOUT LED6(LED6_RED_PIN);
+#define LED6_RED_PIN 43
+TcPINOUT LED6_RED(LED6_RED_PIN);
 
-#define LED7_RED_PIN 28
-TcPINOUT LED7(LED7_RED_PIN);
+#define LED7_RED_PIN 44
+TcPINOUT LED7_RED(LED7_RED_PIN);
 
-#define LED8_RED_PIN 29
-TcPINOUT LED8(LED8_RED_PIN);
+#define LED8_RED_PIN 45
+TcPINOUT LED8_RED(LED8_RED_PIN);
 
-#define LED9_RED_PIN 30
-TcPINOUT LED9(LED9_RED_PIN);
+#define LED9_RED_PIN 46
+TcPINOUT LED9_RED(LED9_RED_PIN);
 
-#define LED10_RED_PIN 31
-TcPINOUT LED10(LED10_RED_PIN);
+#define LED10_RED_PIN 47
+TcPINOUT LED10_RED(LED10_RED_PIN);
 
-TcPINOUT LED_LIST_RED[] = {LED1, LED2, LED3, LED4, LED5, LED6, LED7, LED8, LED9, LED10};
+#define LED11_RED_PIN 48
+TcPINOUT LED11_RED(LED11_RED_PIN);
+
+TcPINOUT LED_LIST_RED[] = {LED1_RED, LED2_RED, LED3_RED, LED4_RED, LED5_RED, LED6_RED, LED7_RED, LED8_RED, LED9_RED, LED10_RED, LED11_RED};
 
 // ------------------  LED GREEN ------------------- //
-#define LED1_GREEN_PIN 11
+#define LED1_GREEN_PIN A1
 TcPINOUT LED1_GREEN(LED1_GREEN_PIN);
 
-#define LED2_GREEN_PIN 12
+#define LED2_GREEN_PIN A2
 TcPINOUT LED2_GREEN(LED2_GREEN_PIN);
 
-#define LED3_GREEN_PIN A8
+#define LED3_GREEN_PIN A3
 TcPINOUT LED3_GREEN(LED3_GREEN_PIN);
 
-#define LED4_GREEN_PIN A9
+#define LED4_GREEN_PIN A4
 TcPINOUT LED4_GREEN(LED4_GREEN_PIN);
 
-#define LED5_GREEN_PIN A10
+#define LED5_GREEN_PIN A5
 TcPINOUT LED5_GREEN(LED5_GREEN_PIN);
 
-#define LED6_GREEN_PIN A11
+#define LED6_GREEN_PIN A6
 TcPINOUT LED6_GREEN(LED6_GREEN_PIN);
 
-#define LED7_GREEN_PIN A12
+#define LED7_GREEN_PIN A7
 TcPINOUT LED7_GREEN(LED7_GREEN_PIN);
 
-#define LED8_GREEN_PIN A13
+#define LED8_GREEN_PIN A8
 TcPINOUT LED8_GREEN(LED8_GREEN_PIN);
 
-#define LED9_GREEN_PIN A14
+#define LED9_GREEN_PIN A9
 TcPINOUT LED9_GREEN(LED9_GREEN_PIN);
 
-#define LED10_GREEN_PIN A15
+#define LED10_GREEN_PIN A10
 TcPINOUT LED10_GREEN(LED10_GREEN_PIN);
 
-TcPINOUT LED_LIST_GREEN[] = {LED1_GREEN, LED2_GREEN, LED3_GREEN, LED4_GREEN, LED5_GREEN, LED6_GREEN, LED7_GREEN, LED8_GREEN, LED9_GREEN, LED10_GREEN};
+#define LED11_GREEN_PIN A11
+TcPINOUT LED11_GREEN(LED11_GREEN_PIN);
+
+TcPINOUT LED_LIST_GREEN[] = {LED1_GREEN, LED2_GREEN, LED3_GREEN, LED4_GREEN, LED5_GREEN, LED6_GREEN, LED7_GREEN, LED8_GREEN, LED9_GREEN, LED10_GREEN, LED11_GREEN};
 // ---------------------------- //
+#define RELAY1_PIN 22
+TcPINOUT RELAY1(RELAY1_PIN,true);
 
-#define RELAY1_PIN 32
-TcPINOUT RELAY1(RELAY1_PIN);
+#define RELAY2_PIN 23
+TcPINOUT RELAY2(RELAY2_PIN,true);
 
-#define RELAY2_PIN 33
-TcPINOUT RELAY2(RELAY2_PIN);
+#define RELAY3_PIN 24
+TcPINOUT RELAY3(RELAY3_PIN,true);
 
-#define RELAY3_PIN 34
-TcPINOUT RELAY3(RELAY3_PIN);
+#define RELAY4_PIN 25
+TcPINOUT RELAY4(RELAY4_PIN,true);
 
-#define RELAY4_PIN 35
-TcPINOUT RELAY4(RELAY4_PIN);
+#define RELAY5_PIN 26
+TcPINOUT RELAY5(RELAY5_PIN,true);
 
-#define RELAY5_PIN 36
-TcPINOUT RELAY5(RELAY5_PIN);
+#define RELAY6_PIN 27
+TcPINOUT RELAY6(RELAY6_PIN,true);
 
-#define RELAY6_PIN 37
-TcPINOUT RELAY6(RELAY6_PIN);
+#define RELAY7_PIN 28
+TcPINOUT RELAY7(RELAY7_PIN,true);
 
-#define RELAY7_PIN 38
-TcPINOUT RELAY7(RELAY7_PIN);
+#define RELAY8_PIN 29
+TcPINOUT RELAY8(RELAY8_PIN,true);
 
-#define RELAY8_PIN 39
-TcPINOUT RELAY8(RELAY8_PIN);
+#define RELAY9_PIN 30
+TcPINOUT RELAY9(RELAY9_PIN,true);
 
-#define RELAY9_PIN 40
-TcPINOUT RELAY9(RELAY9_PIN);
+#define RELAY10_PIN 31
+TcPINOUT RELAY10(RELAY10_PIN,true);
 
-#define RELAY10_PIN 41
-TcPINOUT RELAY10(RELAY10_PIN);
+#define RELAY11_PIN 32
+TcPINOUT RELAY11(RELAY11_PIN,true);
 
-#define BUZZER_PIN 9
-TcPINOUT BUZZER(BUZZER_PIN, false);
-
-TcPINOUT RELAYS[] = {RELAY1, RELAY2, RELAY3, RELAY4, RELAY5, RELAY6, RELAY7, RELAY8, RELAY9, RELAY10};
+TcPINOUT RELAYS[] = {RELAY1, RELAY2, RELAY3, RELAY4, RELAY5, RELAY6, RELAY7, RELAY8, RELAY9, RELAY10, RELAY11};
 const int numRelays = sizeof(RELAYS) / sizeof(RELAYS[0]);
+
+#define BUZZER_PIN 4
+TcPINOUT BUZZER(BUZZER_PIN, true);
 // ------------------ VARIABLES ------------------ //
 uint32_t previousMillis = 0;
 
@@ -165,7 +164,8 @@ const int countBackHomeTime = 120; // 60 seconds
 int countReset = 0;
 const int countResetTime = 2;
 
-#define INDEX_RELAY_MAX 10
+#define INDEX_RELAY_MAX 11
+
 int indexRelay = 0;
 // -------------------- MENU -------------------- //
 int indexMenu = 0; // 0: Home, 1: Setting
@@ -202,7 +202,9 @@ uint8_t countDownStatusETH = 0;  // Sec 12
 uint8_t countUpCommunication = 0;
 
 // -------------------- END STATE BUTTON -------------------- //
-bool isAlarm[10] = {false, false, false, false, false, false, false, false, false, false};
+bool isAlarm[11] = {false, false, false, false, false, false, false, false, false, false, false};
+
+
 #define LIMIT_ADDRESS_EEPROM 10
 int limitAlarm, setLimitAlarm = 6;
 #define TIME_UPDATE_CH_EEPROM 15
@@ -302,7 +304,7 @@ void setup()
   Serial2.begin(9600);
   Serial3.begin(115200);
 
-  pinMode(led, OUTPUT);
+  pinMode(led_mod_bus, OUTPUT);
   node.begin(MbSlaveID, Serial2);
 
   BTN_ESC.OnEventChange(OnEventPress_ESC);
@@ -322,8 +324,9 @@ void setup()
 
   Serial.println("Limit Alarm: " + String(limitAlarm));
   Serial.println("Time Update CH: " + String(timeUpdateCH));
+
   // Loop off led
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < numRelays; i++)
   {
     LED_LIST_RED[i].off();
     LED_LIST_GREEN[i].off();
@@ -448,7 +451,7 @@ String extractData(String data, String key)
 
 void manageRelayByIndex(int _index)
 {
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < numRelays; i++)
   {
     if (i == _index)
     {
@@ -462,7 +465,7 @@ void manageRelayByIndex(int _index)
 }
 int counterSentData = 0;
 // float ch = 0;
-#define CH_DATA_SIZE 10
+#define CH_DATA_SIZE 11
 float chData[CH_DATA_SIZE];
 
 uint32_t previousMillisSec = 0;
@@ -485,17 +488,6 @@ void mainFunction(void)
       data += ":" + String(chData[indexRelay], 1);
       data += "#";
       Serial.println(data);
-      if (statusServer == false)
-      {
-        data = "CH";
-        data += String(indexRelay + 1);
-        data += ",";
-        data += String(chData[indexRelay], 0);
-      }
-      else
-      {
-        Serial3.println(data);
-      }
     }
 
     if (nextTimeRelaySec > timeUpdateCH)
@@ -505,51 +497,10 @@ void mainFunction(void)
       {
         indexRelay = 0;
       }
+
       manageRelayByIndex(indexRelay);
       nextTimeRelaySec = 0;
       previousMillis = currentMillis;
-    }
-
-    countUpCommunication++;
-    if (countUpCommunication > TIME_UP_COMMUNICATION)
-    {
-      countUpCommunication = 0;
-    }
-    else if (countUpCommunication == 2)
-    {
-      Serial.println("Call status ETH");
-      Serial3.println("$STATUS_ETH:ASK#");
-    }
-    else if (countUpCommunication == 3)
-    {
-      Serial.println("Call status SERVER");
-      Serial3.println("$STATUS_SERVER:ASK#");
-    }
-    // ---- Server ---- //
-    if (countDownStatusServer > 0)
-    {
-      countDownStatusServer--;
-      if (countDownStatusServer == 0)
-      {
-        statusServer = false;
-      }
-      else
-      {
-        statusServer = true;
-      }
-    }
-    // ---- ETH ---- //
-    if (countDownStatusETH > 0)
-    {
-      countDownStatusETH--;
-      if (countDownStatusETH == 0)
-      {
-        statusETH = false;
-      }
-      else
-      {
-        statusETH = true;
-      }
     }
 
     // ---- Backlight ---- //
@@ -571,19 +522,12 @@ void mainFunction(void)
   if (currentMillis - previousMillis >= 100) // 200 ms
   {
     previousMillis = currentMillis;
-    // float voltage = acVoltageA1.getVoltageRMS();
-    float voltage = getVoltageRMS();
-    // voltage = voltage < 5 ? 0 : voltage;
-    // ch = voltage;
-    // Print to Serial
-    // Serial.print("CH");
-    // Serial.print(indexRelay + 1);
-    // Serial.print(":");
-    // Serial.print(voltage,5);
-    // Serial.println("V");
-    chData[indexRelay] = voltage;
+    float voltage  =0;
     if (nextTimeRelaySec >= 2)
     {
+
+      voltage = getVoltageRMS();
+      chData[indexRelay] = voltage;
       if (chData[indexRelay] > limitAlarm)
       {
         isAlarm[indexRelay] = true;
@@ -597,7 +541,7 @@ void mainFunction(void)
         LED_LIST_GREEN[indexRelay].on();
 
         // If not index led green off
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < numRelays; i++)
         {
           if (i != indexRelay)
           {
@@ -607,7 +551,7 @@ void mainFunction(void)
       }
 
       bool isAlarmAll = false;
-      for (int i = 0; i < 10; i++)
+      for (int i = 0; i < numRelays; i++)
       {
         if (isAlarm[i] == true)
         {
@@ -623,6 +567,18 @@ void mainFunction(void)
       else
       {
         BUZZER.off();
+      }
+    }
+    else
+    {
+      LED_LIST_GREEN[indexRelay].off();
+      // If not index led green off
+      for (int i = 0; i < numRelays; i++)
+      {
+        if (i != indexRelay)
+        {
+          LED_LIST_GREEN[i].off();
+        }
       }
     }
 
@@ -1148,10 +1104,10 @@ float getVoltageRMS()
 {
   uint16_t MBdata[10];
   uint8_t j, result;
-  digitalWrite(led, 1);
+  digitalWrite(led_mod_bus, 1);
 
   result = node.readHoldingRegisters(0, 8);
-  bool isError = true;
+  bool isError = false;
   // If read is successful, print the registers
   if (result == node.ku8MBSuccess)
   {
@@ -1162,11 +1118,11 @@ float getVoltageRMS()
   }
   else
   {
-    isError = false;
+    isError = true;
     Serial.print("Error reading registers. Code: ");
     Serial.println(result);
   }
-  digitalWrite(led, 0);
+  digitalWrite(led_mod_bus, 0);
   /*
   10:25:45.711 -> Register 0: 1 Status of Alarm
   10:25:45.744 -> Register 1: 0
@@ -1179,8 +1135,8 @@ float getVoltageRMS()
   10:25:45.845 -> Register 8: 0
   10:25:45.884 -> Register 9: 0
   */
- float voltage = 0;
-  if (isError)
+  float voltage = 0;
+  if (!isError)
   {
     // for (j = 0; j < 10; j++)
     // {

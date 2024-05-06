@@ -1,10 +1,8 @@
 #include <ModbusRTUSlave.h>
 #include <SoftwareSerial.h>
 
-// กำหนดพอร์ต SoftwareSerial
 SoftwareSerial mySerial(10, 11);  // RX, TX
 const uint8_t slaveID = 6;
-// สร้างอินสแตนซ์ ModbusRTUSlave ด้วย SoftwareSerial
 ModbusRTUSlave slave(mySerial, 7);  // DE/RE_PIN
 
 void setup() {
