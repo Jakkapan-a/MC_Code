@@ -468,6 +468,7 @@ int counterSentData = 0;
 // float ch = 0;
 #define CH_DATA_SIZE 11
 float chData[CH_DATA_SIZE];
+uint16_t chDataInt[CH_DATA_SIZE];
 
 uint32_t previousMillisSec = 0;
 uint8_t nextTimeRelaySec = 0;
@@ -1152,6 +1153,7 @@ float getVoltageRMS()
     // Serial.print("Voltage: ");
     voltage = MBdata[2] / 10.0;
     // Serial.println(voltage, 1);
+    chDataInt[indexRelay] = MBdata[2];
   }
 
   return voltage;
