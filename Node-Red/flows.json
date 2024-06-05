@@ -1,0 +1,537 @@
+[
+    {
+        "id": "dcbbdfc221d3d6dd",
+        "type": "tab",
+        "label": "SMART TORQUE",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "eddd9cb5a6d15ddd",
+        "type": "mqtt out",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "a3570cf05fa54c24",
+        "x": 1230,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "f00b19b8a406d5c1",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "GET Global variable",
+        "func": "let data = {};\nfor (let i = 1; i <= 11; i++) {\n    data['ch_' + i] = global.get('CH' + i);\n}\n\nconst curr = global.get('current_ch');\n\ndata[\"action\"] = \"status\";\ndata[\"curr\"] = curr;\n\nmsg.payload = data;\n\nconst mqttPath = env.get(\"MQTT_PATH\");\n\nmsg.topic = `${mqttPath}/update`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 720,
+        "wires": [
+            [
+                "e8cb570feae8b0d4",
+                "eddd9cb5a6d15ddd"
+            ]
+        ]
+    },
+    {
+        "id": "e8cb570feae8b0d4",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1240,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "7bd28052c8da1924",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "SET Default CH",
+        "func": "for (let i = 1; i <= 11; i++) {\n    global.set('CH' + i, 0);\n}\nglobal.get('current_ch','')",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 100,
+        "wires": [
+            [
+                "fe3db9aa3b4df932"
+            ]
+        ]
+    },
+    {
+        "id": "adef77bb7119b289",
+        "type": "inject",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "v": "",
+                "vt": "env"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 100,
+        "wires": [
+            [
+                "7bd28052c8da1924",
+                "bbbaeeaa2b044180"
+            ]
+        ]
+    },
+    {
+        "id": "fe3db9aa3b4df932",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 5",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 740,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "3c60a610c4130fa2",
+        "type": "inject",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "$PUB=CH1:5.5#",
+        "payloadType": "str",
+        "x": 170,
+        "y": 720,
+        "wires": [
+            [
+                "2af9d2bcb425f3dc"
+            ]
+        ]
+    },
+    {
+        "id": "87a27627529d9dd5",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 6",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 940,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "99535e9135275eac",
+        "type": "switch",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "cont",
+                "v": "CH",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 550,
+        "y": 720,
+        "wires": [
+            [
+                "7590db9c6e4f9704"
+            ]
+        ]
+    },
+    {
+        "id": "7590db9c6e4f9704",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "Pre Data",
+        "func": "let input = msg.payload;\ninput = input.replace(\"$PUB=\", \"\").replace(\"#\", \"\");\nlet parts = input.split(\":\");\nlet channel = parts[0];\nlet value = parseFloat(parts[1]);\n\nconst oldata = global.get(channel)\n\nglobal.set(\"is_change\", value != oldata);\n\nglobal.set(channel, value);\nglobal.set(\"current_ch\", channel);\n\nmsg.payload = {\n    channel: channel,\n    value: value\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 720,
+        "wires": [
+            [
+                "87a27627529d9dd5",
+                "f00b19b8a406d5c1",
+                "f1a79f1c0f2c8204"
+            ]
+        ]
+    },
+    {
+        "id": "2af9d2bcb425f3dc",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "Clean Data",
+        "func": "const randomCH = Math.floor(Math.random() * 11) + 1;\n\nconst randomValue = (Math.random() * 10.0 + 1.0).toFixed(1);\n\nconst message = `$PUB=CH${randomCH}:${randomValue}#`;\n\nmsg.payload = message;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 720,
+        "wires": [
+            [
+                "99535e9135275eac"
+            ]
+        ]
+    },
+    {
+        "id": "46d4d93490d56e26",
+        "type": "mqtt in",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "topic": "smart-meters/SM-240513003/set-parameters",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "a3570cf05fa54c24",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 210,
+        "y": 340,
+        "wires": [
+            [
+                "121e347b7e35b202"
+            ]
+        ]
+    },
+    {
+        "id": "3daadbb0a417f4bf",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 7",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "bbbaeeaa2b044180",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "GET DATA Form Server",
+        "func": "msg.payload ={\n    name:env.get('ID')\n}\nmsg.url = `http://${env.get('IP_SERVER')}/api/1.0.1/smart-meter`;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 310,
+        "y": 180,
+        "wires": [
+            [
+                "b88f9b61778aa3cc"
+            ]
+        ]
+    },
+    {
+        "id": "121e347b7e35b202",
+        "type": "switch",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "hask",
+                "v": "limit_voltage",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 510,
+        "y": 340,
+        "wires": [
+            [
+                "3daadbb0a417f4bf",
+                "a1c9b2d1ef273540"
+            ]
+        ]
+    },
+    {
+        "id": "a1c9b2d1ef273540",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "Fellter limit_voltage",
+        "func": "let data = msg.payload.limit_voltage;\n\nif (data === undefined) {\n    return;\n}\n\nmsg.payload = data;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 280,
+        "wires": [
+            [
+                "2f8d5ffe903c7284",
+                "c7c46524a91677db"
+            ]
+        ]
+    },
+    {
+        "id": "b88f9b61778aa3cc",
+        "type": "http request",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "query",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "Accept",
+                "keyValue": "",
+                "valueType": "application/json",
+                "valueValue": ""
+            }
+        ],
+        "x": 530,
+        "y": 180,
+        "wires": [
+            [
+                "d7c46ac881877430"
+            ]
+        ]
+    },
+    {
+        "id": "e11609ce1cc78d76",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 8",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1000,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "d7c46ac881877430",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "Fellter limit_voltage",
+        "func": "let data = msg.payload.smart_meter.limit_voltage;\n\nif(data === undefined){\n    return;\n}\n\nmsg.payload = data.toString();\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 180,
+        "wires": [
+            [
+                "e11609ce1cc78d76",
+                "c7c46524a91677db"
+            ]
+        ]
+    },
+    {
+        "id": "2f8d5ffe903c7284",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 9",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1000,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "c7c46524a91677db",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "Prepare Data",
+        "func": "let data = msg.payload;\n\ndata = `$UPDATE_LIMIT:${data}#`;\nmsg.payload = data;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1030,
+        "y": 220,
+        "wires": [
+            [
+                "07089924812cd731"
+            ]
+        ]
+    },
+    {
+        "id": "07089924812cd731",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 10",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1240,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "f1a79f1c0f2c8204",
+        "type": "function",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "function 5",
+        "func": "const isChnage = global.get(\"is_change\")\nmsg.payload = isChnage;\nif(!isChnage){\n    return;\n}\n\nlet data = {};\nfor (let i = 1; i <= 11; i++) {\n    data['ch_' + i] = global.get('CH' + i);\n}\n\nconst curr = global.get('current_ch');\n\ndata[\"action\"] = \"status\";\ndata[\"current_ch\"] = curr;\n\nmsg.payload = data;\n\nconst mqttPath = env.get(\"MQTT_PATH\");\n\n// msg.topic = `${mqttPath}/update`;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 1020,
+        "wires": [
+            [
+                "ce30e4332c86eafa"
+            ]
+        ]
+    },
+    {
+        "id": "ce30e4332c86eafa",
+        "type": "debug",
+        "z": "dcbbdfc221d3d6dd",
+        "name": "debug 11",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1140,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "a3570cf05fa54c24",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "127.0.0.1",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "5",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "${MQTT_PATH_STATUS}",
+        "birthQos": "1",
+        "birthRetain": "true",
+        "birthPayload": "online",
+        "birthMsg": {},
+        "closeTopic": "${MQTT_PATH_STATUS}",
+        "closeQos": "1",
+        "closeRetain": "true",
+        "closePayload": "offline",
+        "closeMsg": {
+            "contentType": "text/plain"
+        },
+        "willTopic": "smart-meters/SM-240513003/status",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

@@ -224,8 +224,6 @@ boolean endReceived = false;
 const char startChar = '$';
 const char endChar = '#';
 
-char fileName[8];
-// String inputString = "";
 char inputString[BUFFER_SIZE_DATA];
 int inputStringLength = 0;
 void serialEvent()
@@ -427,6 +425,10 @@ void parseData(String data)
     {
       limitAlarm = limit;
       updateEEPROM(LIMIT_ADDRESS_EEPROM, limitAlarm);
+
+      BUZZER.on();
+      delay(100);
+      BUZZER.off();
     }
   }
 }
