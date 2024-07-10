@@ -1,7 +1,8 @@
 #include <ModbusRTUSlave.h>
 #include <SoftwareSerial.h>
-
-SoftwareSerial mySerial(10, 11);  // RX, TX
+#define RX_PIN 10
+#define TX_PIN 11
+SoftwareSerial mySerial(RX_PIN, TX_PIN);  // RX, TX
 const uint8_t slaveID = 6;
 ModbusRTUSlave slave(mySerial, 7);  // DE/RE_PIN
 
