@@ -346,7 +346,6 @@ void loop()
   BTN_UP.update();
   BTN_DOWN.update();
   BTN_ENTER.update();
-  // acVoltageA1.update();
   mainFunction();
   manageSerial();
   manageSerial3();
@@ -385,7 +384,6 @@ void parseData(String data)
   data.trim();
   if (data.indexOf("STATUS_SERVER:") != -1)
   {
-    // Send data to MES
     String extract = extractData(data, "STATUS_SERVER:");
     if (extract == "OK")
     {
@@ -400,8 +398,6 @@ void parseData(String data)
   }
   else if (data.indexOf("STATUS_ETH:") != -1)
   {
-    // Send data to MES
-    // countDownStatusETH = TIME_OUT_COMMUNICATION;
     String extract = extractData(data, "STATUS_ETH:");
     if (extract == "OK")
     {
@@ -416,8 +412,6 @@ void parseData(String data)
   }
   else if (data.indexOf("UPDATE_LIMIT:") != -1)
   {
-    // Send data to MES
-    // countDownStatusETH = TIME_OUT_COMMUNICATION;
     String extract = extractData(data, "UPDATE_LIMIT:");
     // convert to int
     int limit = extract.toInt();
@@ -1127,32 +1121,9 @@ float getVoltageRMS()
     Serial.println(result);
   }
   digitalWrite(led_mod_bus, 0);
-  /*
-  10:25:45.711 -> Register 0: 1 Status of Alarm
-  10:25:45.744 -> Register 1: 0
-  10:25:45.744 -> Register 2: 125 Voltage (Decimal Point = 1, V = 12.5)
-  10:25:45.778 -> Register 3: 0
-  10:25:45.778 -> Register 4: 151
-  10:25:45.811 -> Register 5: 0
-  10:25:45.811 -> Register 6: 1
-  10:25:45.845 -> Register 7: 10
-  10:25:45.845 -> Register 8: 0
-  10:25:45.884 -> Register 9: 0
-  */
   float voltage = 0;
   if (!isError)
   {
-    // for (j = 0; j < 10; j++)
-    // {
-    //   Serial.print("Register ");
-    //   Serial.print(j);
-    //   Serial.print(": ");
-    //   Serial.println(MBdata[j]);
-    // }
-    // Serial.println("====================================");
-    // Serial.print("Status of Alarm: ");
-    // Serial.println(MBdata[0]);
-    // Serial.print("Voltage: ");
     voltage = MBdata[2] / 10.0;
     // Serial.println(voltage, 1);
     chDataInt[indexRelay] = MBdata[2];
