@@ -6,27 +6,27 @@
  * @date 2024-03-14
  * Arduino Mega 2560
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 #include <TcBUTTON.h>
 #include <TcPINOUT.h>
 #include <LiquidCrystal_I2C.h>
-// #include <AcVoltage.h>
 
 #include <ModbusMaster.h>
 #include <SPI.h>
-// #include <SD.h>
 #include <Wire.h>
 #include <EEPROM.h>
 
-// #include "Setting.h"
 // ------------------   INPUT   ------------------ //
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Module IIC/I2C Interface
 
 const int led_mod_bus = 8;
 ModbusMaster node;
 #define MbSlaveID 5 // Slave ID of the Modbus device
+
+// ----------------------- Output Normal ----------------------- //
+#ifndef false // Set false if you want to invert the output , true if you want to normal output
 
 #define BTN_ESC_PIN 34
 void OnEventPress_ESC(bool state);
@@ -115,6 +115,7 @@ TcPINOUT LED10_GREEN(LED10_GREEN_PIN);
 TcPINOUT LED11_GREEN(LED11_GREEN_PIN);
 
 TcPINOUT LED_LIST_GREEN[] = {LED1_GREEN, LED2_GREEN, LED3_GREEN, LED4_GREEN, LED5_GREEN, LED6_GREEN, LED7_GREEN, LED8_GREEN, LED9_GREEN, LED10_GREEN, LED11_GREEN};
+
 // ---------------------------- //
 #define RELAY1_PIN 22
 TcPINOUT RELAY1(RELAY1_PIN,false);
@@ -154,6 +155,126 @@ const int numRelays = sizeof(RELAYS) / sizeof(RELAYS[0]);
 
 #define BUZZER_PIN 4
 TcPINOUT BUZZER(BUZZER_PIN, true);
+
+// ------------------   Invert output  ------------------ //
+
+#else
+
+#define LED1_RED_PIN 38
+#define LED2_RED_PIN 39
+#define LED3_RED_PIN 40
+#define LED4_RED_PIN 41
+#define LED5_RED_PIN 42
+#define LED6_RED_PIN 43
+#define LED8_RED_PIN 45
+#define LED7_RED_PIN 44
+#define LED9_RED_PIN 46
+#define LED10_RED_PIN 47
+#define LED11_RED_PIN 48
+
+#define LED1_GREEN_PIN A1
+#define LED2_GREEN_PIN A2
+#define LED3_GREEN_PIN A3
+#define LED4_GREEN_PIN A4
+#define LED5_GREEN_PIN A5
+#define LED6_GREEN_PIN A6
+#define LED7_GREEN_PIN A7
+#define LED8_GREEN_PIN A8
+#define LED9_GREEN_PIN A9
+#define LED10_GREEN_PIN A10
+#define LED11_GREEN_PIN A11
+
+TcPINOUT LED1_RED(LED1_GREEN_PIN);
+
+TcPINOUT LED2_RED(LED2_GREEN_PIN);
+
+TcPINOUT LED3_RED(LED3_GREEN_PIN);
+
+TcPINOUT LED4_RED(LED4_GREEN_PIN);
+
+TcPINOUT LED5_RED(LED5_GREEN_PIN);
+
+TcPINOUT LED6_RED(LED6_GREEN_PIN);
+
+TcPINOUT LED7_RED(LED7_GREEN_PIN);
+
+TcPINOUT LED8_RED(LED8_GREEN_PIN);
+
+TcPINOUT LED9_RED(LED9_GREEN_PIN);
+
+TcPINOUT LED10_RED(LED10_GREEN_PIN);
+
+TcPINOUT LED11_RED(LED11_GREEN_PIN);
+
+TcPINOUT LED_LIST_RED[] = {LED1_RED, LED2_RED, LED3_RED, LED4_RED, LED5_RED, LED6_RED, LED7_RED, LED8_RED, LED9_RED, LED10_RED, LED11_RED};
+
+// ------------------  LED GREEN ------------------- //
+TcPINOUT LED1_GREEN(LED1_RED_PIN);
+
+TcPINOUT LED2_GREEN(LED2_RED_PIN);
+
+TcPINOUT LED3_GREEN(LED3_RED_PIN);
+
+TcPINOUT LED4_GREEN(LED4_RED_PIN);
+
+TcPINOUT LED5_GREEN(LED5_RED_PIN);
+
+TcPINOUT LED6_GREEN(LED6_RED_PIN);
+
+TcPINOUT LED7_GREEN(LED7_RED_PIN);
+
+TcPINOUT LED8_GREEN(LED8_RED_PIN);
+
+TcPINOUT LED9_GREEN(LED9_RED_PIN);
+
+TcPINOUT LED10_GREEN(LED10_RED_PIN);
+
+TcPINOUT LED11_GREEN(LED11_RED_PIN);
+
+TcPINOUT LED_LIST_GREEN[] = {LED1_GREEN, LED2_GREEN, LED3_GREEN, LED4_GREEN, LED5_GREEN, LED6_GREEN, LED7_GREEN, LED8_GREEN, LED9_GREEN, LED10_GREEN, LED11_GREEN};
+
+// ---------------------------- //
+#define RELAY1_PIN 22
+TcPINOUT RELAY1(RELAY1_PIN,false);
+
+#define RELAY2_PIN 23
+TcPINOUT RELAY2(RELAY2_PIN,false);
+
+#define RELAY3_PIN 24
+TcPINOUT RELAY3(RELAY3_PIN,false);
+
+#define RELAY4_PIN 25
+TcPINOUT RELAY4(RELAY4_PIN,false);
+
+#define RELAY5_PIN 26
+TcPINOUT RELAY5(RELAY5_PIN,false);
+
+#define RELAY6_PIN 27
+TcPINOUT RELAY6(RELAY6_PIN,false);
+
+#define RELAY7_PIN 28
+TcPINOUT RELAY7(RELAY7_PIN,false);
+
+#define RELAY8_PIN 29
+TcPINOUT RELAY8(RELAY8_PIN,false);
+
+#define RELAY9_PIN 30
+TcPINOUT RELAY9(RELAY9_PIN,false);
+
+#define RELAY10_PIN 31
+TcPINOUT RELAY10(RELAY10_PIN,false);
+
+#define RELAY11_PIN 32
+TcPINOUT RELAY11(RELAY11_PIN,false);
+
+TcPINOUT RELAYS[] = {RELAY1, RELAY2, RELAY3, RELAY4, RELAY5, RELAY6, RELAY7, RELAY8, RELAY9, RELAY10, RELAY11};
+const int numRelays = sizeof(RELAYS) / sizeof(RELAYS[0]);
+
+#define BUZZER_PIN 4
+TcPINOUT BUZZER(BUZZER_PIN, false);  // Invert logic
+
+#endif
+
 // ------------------ VARIABLES ------------------ //
 uint32_t previousMillis = 0;
 
